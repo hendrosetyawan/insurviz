@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>InsurViz · Storm Damage Risk Analytics</title>
+  <meta name="description" content="3D visual analytics of NOAA hail, thunderstorm-wind and tornado history for property-insurance risk analysis." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body class="is-loading">
+  <div id="splash" class="splash">
+    <div class="splash__mark">◈</div>
+    <div class="splash__name">INSURVIZ</div>
+    <div class="splash__sub">Storm damage risk analytics · NOAA Storm Events 2015–2025</div>
+    <div class="splash__bar"><i></i></div>
+    <div id="loading" class="splash__status">Loading 308,762 hail, wind and tornado events…</div>
+  </div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark">◈</span>
+      <div>
+        <div class="brand__name">INSURVIZ</div>
+        <div class="brand__sub">Storm damage risk analytics for property insurance · Team 8</div>
+      </div>
+    </div>
+    <div id="kpis" class="kpis"></div>
+  </header>
+
+  <section class="controls">
+    <div class="control">
+      <label for="metric">Column height</label>
+      <select id="metric"></select>
+    </div>
+    <div class="control">
+      <span class="control__label">Perils</span>
+      <div id="perils" class="chips"></div>
+    </div>
+    <div class="control">
+      <span class="control__label">Years <b id="year-label"></b></span>
+      <div class="years-row">
+        <div class="years">
+          <input id="year-from" type="range" step="1" aria-label="First year" />
+          <input id="year-to" type="range" step="1" aria-label="Last year" />
+        </div>
+        <button id="play" class="button">▶ Play years</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="view-mode">3D view</label>
+      <select id="view-mode"></select>
+    </div>
+    <button id="orbit" class="button">⟳ Auto-orbit</button>
+    <button id="reset" class="button button--ghost">Reset view</button>
+  </section>
+
+  <main class="layout">
+    <aside class="column column--left">
+      <section class="panel" id="panel-r1">
+        <h2 class="panel__title"><span class="req">R1</span> Geographic comparison</h2>
+        <p class="panel__sub">States ranked by the chosen metric. Click a state to select it.</p>
+        <div class="panel__body"></div>
+      </section>
+      <section class="panel panel--note">
+        <h2 class="panel__title">How to read the map</h2>
+        <p id="metric-note"></p>
+        <p>Each glowing point is one NOAA report (bigger = significant or damaging). Pillars with pulsing rings mark the most damaging events in the filters.</p>
+        <p>Drag to orbit · scroll to zoom · right-drag to pan. Hover a column for values; click it to select that map cell.</p>
+        <p class="caution">NOAA damage values are estimates entered by the National Weather Service, not insured losses. Many are blank or rough.</p>
+      </section>
+    </aside>
+
+    <section class="stage">
+      <div class="stage__label">
+        <span>Selection</span>
+        <b id="selection-title"></b>
+        <button id="clear-selection" class="button button--small" hidden>Clear</button>
+      </div>
+      <div id="scene" class="scene"></div>
+    </section>
+
+    <aside class="column column--right">
+      <section class="panel" id="panel-r2">
+        <h2 class="panel__title"><span class="req">R2</span> Peril composition</h2>
+        <div class="panel__body"></div>
+      </section>
+      <section class="panel" id="panel-r3">
+        <h2 class="panel__title"><span class="req">R3</span> Temporal change</h2>
+        <p class="panel__sub">Click a year to focus on it.</p>
+        <div class="panel__body"></div>
+      </section>
+      <section class="panel panel--grow" id="panel-r4">
+        <h2 class="panel__title"><span class="req">R4</span> Event investigation</h2>
+        <p class="panel__sub">Most damaging events in the selection. Click one to light it on the map.</p>
+        <div class="panel__body"></div>
+      </section>
+    </aside>
+  </main>
+
+  <div id="ticker" class="ticker" aria-label="Most damaging events in the current filters"></div>
+  <footer class="footer">
+    <span>Data: NOAA NCEI Storm Events Database, hail + thunderstorm wind + tornado, 2015–2025 (<span id="event-count">…</span> events).</span>
+    <span>Aadi Mahajan · Abhinav Sheshadri · Hendro Setyawan · MD Imtiaz Mahi</span>
+  </footer>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
