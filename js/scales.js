@@ -10,6 +10,11 @@ import { metricColumn } from "./metrics.js";
 
 /** Prism height: sqrt for counts/money, linear (clamped at the 98th percentile) for rates. */
 export function makeHeightScale(values, metric) {
+  if (METRICS[metric].diverging) {
+    const max = d3.max(metricColumn(values, metric), Math.abs) || 1;
+    const s = d3.scaleLinear().domain([0, max]).range([SCENE.minPrismHeight, SCENE.maxPrismHeight]);
+    return (v) => s(Math.abs(v)); // taller = larger disagreement, either direction
+  }
   const column = metricColumn(values, metric);
   const spec = METRICS[metric];
   if (spec.scale === "sqrt") {
@@ -31,7 +36,17 @@ export function classColors() {
  * Quantile classes (equal numbers of counties per colour), so skewed metrics
  * still spread across the ramp. Returns colour(value) plus the class breaks.
  */
+/** Diverging classes for signed metrics (mismatch): blue = hazard > insurance, red = insurance > hazard. */
+const DIVERGING_BREAKS = [-50, -30, -12, 12, 30, 50];
+function makeDivergingScale(values, metric) {
+  const colors = ["#2563eb", "#60a5fa", "#a5c8f0", "#3a3f45", "#f6b38a", "#f97316", "#dc2626"];
+  const scale = d3.scaleThreshold().domain(DIVERGING_BREAKS).range(colors);
+  const color = (value) => (value == null || !Number.isFinite(value) ? NO_DATA_COLOR : scale(value));
+  return { color, breaks: DIVERGING_BREAKS, colors, extent: d3.extent(metricColumn(values, metric)), diverging: true };
+}
+
 export function makeColorScale(values, metric) {
+  if (METRICS[metric].diverging) return makeDivergingScale(values, metric);
   const column = metricColumn(values, metric);
   const colors = classColors();
   const range = METRICS[metric].risk === "low" ? colors.slice().reverse() : colors;

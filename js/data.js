@@ -15,9 +15,9 @@ function texasProjection(texasFeature) {
 }
 
 export async function loadAll() {
-  const [events, counties, complaints, meta, geometry, countyYear, lossMeta] = await Promise.all([
+  const [events, counties, complaints, meta, geometry, countyYear, lossMeta, zipData] = await Promise.all([
     d3.json(DATA.events), d3.json(DATA.counties), d3.json(DATA.complaints), d3.json(DATA.meta), d3.json(DATA.geometry),
-    d3.json(DATA.countyYear), d3.json(DATA.lossMeta),
+    d3.json(DATA.countyYear), d3.json(DATA.lossMeta), d3.json(DATA.zipReasons),
   ]);
   const lossRowsByFips = d3.group(countyYear, (r) => r.county_fips);
 
@@ -53,5 +53,5 @@ export async function loadAll() {
   }
   Object.assign(columns, { x, y, countyIdx: county });
 
-  return { events, countyList, countyIndex, twia, texas, countyBorders, projection, complaints, meta, lossMeta };
+  return { events, countyList, countyIndex, twia, texas, countyBorders, projection, complaints, meta, lossMeta, zipData };
 }

@@ -27,6 +27,7 @@ export function formatMetric(metric, value) {
     case "rate1": return d3.format(",.1f")(value);
     case "rate2": return d3.format(",.2f")(value);
     case "year": return String(Math.round(value));
+    case "points": return `${value > 0 ? "+" : ""}${Math.round(value)}`;
     case "times": return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)}×`;
     default: return formatCount(value);
   }

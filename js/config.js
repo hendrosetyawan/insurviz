@@ -14,6 +14,7 @@ export const DATA = {
   geometry: "data/us-counties-10m.json",
   countyYear: "data/county_year.json", // integrated NOAA + TDI losses + ACS, county × year 2019–2025
   lossMeta: "data/meta.json",
+  zipReasons: "data/hb2067_zip.json", // HB 2067 by ZIP (TDI ZIP tool, launched 23 Sep 2026)
 };
 /** TDI "Texas homeowners losses by county" covers these calendar years. */
 export const LOSS_YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025];
@@ -29,7 +30,7 @@ export const PERILS = [
   { key: "wind", label: "Thunderstorm wind", color: "#f5a524" },
   { key: "tornado", label: "Tornado", color: "#c77dff" },
 ];
-export const FIRST_YEAR = 2015;
+export const FIRST_YEAR = 2019; // analysis window follows TDI homeowners loss data (2019–2025)
 export const LAST_YEAR = 2025;
 
 /** NWS/SPC "significant" thresholds: hail >= 2 in, wind >= 65 kt, every tornado. */
@@ -42,7 +43,7 @@ export const SIGNIFICANT = { hailInches: 2.0, windKnots: 65 };
  *   market   – Texas Department of Insurance (how insurance is behaving)
  */
 export const LENSES = {
-  hazard: { label: "Hazard", source: "NOAA Storm Events 2015–2025", color: "#4ea8ff" },
+  hazard: { label: "Hazard", source: "NOAA Storm Events 2019–2025", color: "#4ea8ff" },
   exposure: { label: "Exposure", source: "Census ACS 2020–2024", color: "#2dd4bf" },
   market: { label: "Insurance market", source: "Texas Dept. of Insurance", color: "#ff6b8b" },
   losses: { label: "Insured losses", source: "TDI homeowners losses 2019–2025", color: "#fb923c" },
@@ -67,7 +68,7 @@ export const METRICS = {
   // exposure (ACS)
   housingUnits: { lens: "exposure", label: "Housing units", scale: "sqrt", risk: "high", format: "count" },
   ownerUnits: { lens: "exposure", label: "Owner-occupied homes", scale: "sqrt", risk: "high", format: "count" },
-  ownerValue: { lens: "exposure", label: "Owner-occupied home value (proxy)", scale: "sqrt", risk: "high", format: "money",
+  ownerValue: { lens: "exposure", label: "Census property value (owner homes × median value)", scale: "sqrt", risk: "high", format: "money",
     note: "owner-occupied homes × median home value" },
   medianHomeValue: { lens: "exposure", label: "Median home value", scale: "linear", risk: "high", format: "money" },
   medianYearBuilt: { lens: "exposure", label: "Median year built", scale: "linear", risk: "low", format: "year",
@@ -107,11 +108,16 @@ export const METRICS = {
     note: "TDI average insured property amount, policies with wind coverage (insured value, not market value)" },
   premiumPer1kCoverage: { lens: "market", label: "Premium per $1,000 of coverage", scale: "linear", risk: "high", format: "rate2",
     note: "average premium ÷ average coverage × 1,000: a price-per-coverage proxy (same policies: compatible)" },
+  // storm ↔ insurance link
+  mismatch: { lens: "losses", label: "Hazard–insurance mismatch (pct. points)", scale: "linear", risk: "high", format: "points", diverging: true,
+    note: "Texas percentile of TDI paid loss per policy minus percentile of storm reports per 1,000 km²: + = insured loss higher than hazard suggests, − = hazard higher than insured loss" },
+  coverageToValue: { lens: "exposure", label: "Insured coverage ÷ Census home value", scale: "linear", risk: "low", format: "ratio",
+    note: "TDI average coverage (policies with wind) ÷ ACS median home value: an insurance-to-value proxy (below 1 = coverage below typical market value)" },
   stormDensity: { lens: "hazard", label: "Storm reports per 1,000 km² per year", scale: "linear", risk: "high", format: "rate2", filtered: true,
     note: "reports per year ÷ county area (from boundary geometry)" },
 };
-export const DEFAULT_HEIGHT_METRIC = "significantPerYear";
-export const DEFAULT_COLOR_METRIC = "lossPerPolicy";
+export const DEFAULT_HEIGHT_METRIC = "paidLoss";   // insurance first: TDI paid homeowners losses
+export const DEFAULT_COLOR_METRIC = "mismatch";   // where hazard and insured loss disagree
 
 /** Counties too small for stable insurance rates are drawn grey for rate metrics. */
 export const MIN_POLICIES_FOR_RATES = 500;
@@ -155,7 +161,7 @@ export const VIEW_MODES = {
   prisms: { label: "County prisms", prisms: true, particles: false },
   lights: { label: "Storm lights", prisms: false, particles: true },
 };
-export const DEFAULT_VIEW_MODE = "both";
+export const DEFAULT_VIEW_MODE = "prisms";
 export const AUTO_ROTATE_SPEED = 0.4;
 export const PLAYBACK_MS = 1100;
 

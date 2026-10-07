@@ -10,9 +10,9 @@
  * and summarises the current selection for the panels.
  */
 
-import { METRICS, MIN_POLICIES_FOR_RATES, SIGNIFICANT } from "./config.js";
+import { FIRST_YEAR, LAST_YEAR, METRICS, MIN_POLICIES_FOR_RATES, SIGNIFICANT } from "./config.js";
 import { inSelection } from "./state.js";
-import { discordanceTypes, fitBaseline, lossMetrics } from "./losses.js";
+import { discordanceTypes, fitBaseline, lossMetrics, percentileOf } from "./losses.js";
 
 const PERIL_COUNT = 3;
 
@@ -59,11 +59,11 @@ export function aggregate(data, state, { eventTableRows, highlightCount, visibil
   const yearCount = state.yearTo - state.yearFrom + 1;
   const n = countyList.length;
   const perCounty = Array.from({ length: n }, () => ({ events: 0, significant: 0, damage: 0 }));
-  const firstYear = 2015;
+  const firstYear = FIRST_YEAR;
 
   const selected = {
     byPeril: [0, 0, 0], damageByPeril: [0, 0, 0],
-    byYear: Array.from({ length: 11 }, () => [0, 0, 0]),
+    byYear: Array.from({ length: LAST_YEAR - FIRST_YEAR + 1 }, () => [0, 0, 0]),
     byMonth: Array.from({ length: 12 }, () => [0, 0, 0]),
     eventCount: 0, significant: 0, damageTotal: 0, topEvents: [],
   };
@@ -79,7 +79,7 @@ export function aggregate(data, state, { eventTableRows, highlightCount, visibil
 
   for (let i = 0; i < events.count; i++) {
     const p = peril[i];
-    if (!state.perils[p]) continue;
+    if (!state.perils[p] || year[i] < FIRST_YEAR || year[i] > LAST_YEAR) continue; // analysis window = TDI years
     const c = countyIdx[i];
     const fips = c >= 0 ? countyList[c].fips : -1;
     const isSelected = c >= 0 && inSelection(state.selection, fips);
@@ -118,7 +118,15 @@ export function aggregate(data, state, { eventTableRows, highlightCount, visibil
   });
   // exploratory baseline for loss per policy + discordance types (needs all counties' values)
   const baseline = fitBaseline(countyList, values, data.twia);
-  values.forEach((v) => { v.types = discordanceTypes(values, v); });
+  values.forEach((v, i) => {
+    v.types = discordanceTypes(values, v);
+    // storm ↔ insurance mismatch: insured-loss percentile minus hazard percentile (points)
+    const pi = percentileOf(values, "lossPerPolicy", v.lossPerPolicy), ph = percentileOf(values, "stormDensity", v.stormDensity);
+    v.mismatch = pi != null && ph != null && v.avgPolicies >= MIN_POLICIES_FOR_RATES ? pi - ph : null;
+    v.insurancePct = pi; v.hazardPct = ph;
+    const homeValue = countyList[i].data.medianHomeValue;
+    v.coverageToValue = v.averageCoverage && homeValue ? v.averageCoverage / homeValue : null;
+  });
 
   const selection = summariseMarket(countyList, state.selection, selected);
   // insured-loss totals for the selection
@@ -126,6 +134,10 @@ export function aggregate(data, state, { eventTableRows, highlightCount, visibil
   const paidSum = d3.sum(chosen, (v) => v.paidLoss || 0), policySum = d3.sum(chosen, (v) => v.avgPolicies || 0);
   selection.paidLoss = chosen.some((v) => v.paidLoss != null) ? paidSum : null;
   selection.lossPerPolicy = policySum > 0 ? paidSum / policySum : null;
+  selection.propertyValue = d3.sum(selection.counties, (c) => (c.data.ownerUnits && c.data.medianHomeValue ? c.data.ownerUnits * c.data.medianHomeValue : 0)) || null;
+  // policy-weighted average premium (latest year) for the selection
+  const withPremium = chosen.filter((v) => v.premiumPerPolicy != null && v.avgPolicies > 0);
+  selection.premium = withPremium.length ? d3.sum(withPremium, (v) => v.premiumPerPolicy * v.avgPolicies) / d3.sum(withPremium, (v) => v.avgPolicies) : null;
   return { values, selection, highlights, baseline };
 }
 

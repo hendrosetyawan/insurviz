@@ -15,9 +15,9 @@ import { riskPercentile } from "../metrics.js";
 
 const ROWS = {
   hazard: ["significantPerYear", "reportsPer1kHomes", "noaaDamage"],
-  exposure: ["ownerUnits", "medianHomeValue", "medianYearBuilt"],
+  exposure: ["ownerValue", "medianHomeValue", "coverageToValue", "medianYearBuilt"],
   market: ["premiumPerPolicy", "premiumChange", "premiumPer1kCoverage", "coverageRatio", "nonrenewalRate", "windHailShare"],
-  losses: ["paidLoss", "lossPerPolicy", "lossPer1kValue", "windHailLossShare", "baselineRatio"],
+  losses: ["paidLoss", "lossPerPolicy", "lossPer1kValue", "windHailLossShare", "mismatch", "baselineRatio"],
 };
 
 export function createProfile(container, { onMetricClick }) {

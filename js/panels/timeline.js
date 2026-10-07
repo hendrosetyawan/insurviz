@@ -8,7 +8,7 @@
  * Clicking a year narrows the year filter to it.
  */
 
-import { FIRST_YEAR, PERILS } from "../config.js";
+import { FIRST_YEAR, LAST_YEAR, PERILS } from "../config.js";
 import { formatCount, monthName } from "../format.js";
 
 export function createTimeline(container, { complaints, onPickYear }) {
@@ -26,9 +26,9 @@ export function createTimeline(container, { complaints, onPickYear }) {
   svg.append("text").attr("class", "axis-label").attr("x", margin.left).attr("y", 10).text("storm reports / yr (selection)");
   svg.append("text").attr("class", "axis-label axis-label--complaints").attr("x", width - 4).attr("y", 10).attr("text-anchor", "end").text("TDI homeowners complaints / yr (statewide)");
 
-  // statewide complaints per year (2015-2025, matching the storm years)
+  // statewide complaints per year (analysis window, matching the storm years)
   const complaintsByYear = d3.rollups(complaints.months.map((m, i) => ({ year: +m.slice(0, 4), n: complaints.total[i] })), (v) => d3.sum(v, (d) => d.n), (d) => d.year)
-    .filter(([year]) => year >= FIRST_YEAR && year <= 2025).sort((a, b) => a[0] - b[0]);
+    .filter(([year]) => year >= FIRST_YEAR && year <= LAST_YEAR).sort((a, b) => a[0] - b[0]);
 
   // peril clock
   const size = 170, inner = 22, outer = 68;

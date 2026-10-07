@@ -28,6 +28,9 @@ import { createExplain } from "./panels/explain.js";
 import { createAnomalies } from "./panels/anomalies.js";
 import { createLossTrends } from "./panels/lossTrends.js";
 import { renderMethodology } from "./panels/methodology.js";
+import { createMismatchMatrix } from "./panels/mismatchMatrix.js";
+import { createStormLossLink } from "./panels/stormLossLink.js";
+import { createZipReasons } from "./panels/zipReasons.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -132,6 +135,9 @@ async function start() {
   const anomalies = createAnomalies($("#panel-anomalies .panel__body"), { countyList, onSelectCounty: selectCounty });
   const lossTrends = createLossTrends($("#panel-losstrends .panel__body"), { countyList });
   renderMethodology($("#methods .methods__content"), data.lossMeta);
+  const matrix = createMismatchMatrix($("#panel-matrix .panel__body"), { countyList, onSelectCounty: selectCounty, onHover: showCountyTooltip });
+  const stormLossLink = createStormLossLink($("#panel-link .panel__body"), { countyList });
+  const zipReasons = createZipReasons($("#panel-zip .panel__body"), { zipData: data.zipData });
   $("#methods-open").addEventListener("click", () => $("#methods").showModal());
   $("#methods-close").addEventListener("click", () => $("#methods").close());
 
@@ -251,11 +257,14 @@ async function start() {
     timeline.update(sel, state);
     reasons.update(sel);
     eventTable.update(sel, state);
-    ticker.update(latest.highlights);
+    ticker.update(countyList, state);
     const focusCounty = state.selection.type === "county" ? countyList[data.countyIndex.get(state.selection.fips)] : null;
     explain.update({ data, values, county: focusCounty, state });
     anomalies.update(values, latest.baseline, focusCounty?.fips);
     lossTrends.update(focusCounty);
+    matrix.update(values, focusCounty?.fips);
+    stormLossLink.update(focusCounty);
+    zipReasons.update(focusCounty);
   }
   store.subscribe(render);
   syncControls();

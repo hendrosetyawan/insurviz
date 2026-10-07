@@ -17,8 +17,8 @@ export function createLegend(container) {
 
   function update(heightMetric, colorMetric, colorScale) {
     const tag = (m) => `<span class="lens-tag" style="--lens:${LENSES[METRICS[m].lens].color}">${LENSES[METRICS[m].lens].label}</span>`;
-    heightRow.html(`<b>Height</b> ${tag(heightMetric)} ${METRICS[heightMetric].label}${METRICS[heightMetric].risk === "low" ? " (taller = lower)" : ""}`);
-    colorTitle.html(`<b>Colour</b> ${tag(colorMetric)} ${METRICS[colorMetric].label} <em>quantile classes</em>`);
+    heightRow.html(`<b>Height</b> ${tag(heightMetric)} ${METRICS[heightMetric].label}${METRICS[heightMetric].diverging ? " (taller = larger disagreement)" : METRICS[heightMetric].risk === "low" ? " (taller = lower)" : ""}`);
+    colorTitle.html(`<b>Colour</b> ${tag(colorMetric)} ${METRICS[colorMetric].label} <em>${colorScale.diverging ? "blue = hazard > insured loss · red = insured loss > hazard" : "quantile classes"}</em>`);
     const items = [...colorScale.colors.map((c, i) => ({ color: c, i })), { color: NO_DATA_COLOR, i: -1 }];
     svg.selectAll("rect").data(items).join("rect")
       .attr("x", (d) => (d.i < 0 ? width - swatch : d.i * swatch)).attr("y", 2).attr("width", swatch - 2).attr("height", 10).attr("fill", (d) => d.color);

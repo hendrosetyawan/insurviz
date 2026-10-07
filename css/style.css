@@ -257,3 +257,40 @@ optgroup { color: var(--muted); }
 .kpi__value { font-size: 14px; }
 .kpi__label { font-size: 9px; letter-spacing: 0.06em; }
 .brand__sub { max-width: 330px; }
+
+/* ---------- storm ↔ insurance link panels ---------- */
+.matrix .zone { stroke: none; }
+.zone--ins { fill: rgba(249, 115, 22, 0.1); } .zone--haz { fill: rgba(96, 165, 250, 0.1); }
+.matrix .diag { stroke: var(--muted); stroke-dasharray: 4 3; }
+.zone-label { font-size: 9px; font-weight: 600; } .zone-label--ins { fill: #fb923c; } .zone-label--haz { fill: #60a5fa; }
+.matrix circle { cursor: pointer; }
+.dot-name { fill: var(--ink); font-size: 8.5px; paint-order: stroke; stroke: var(--bg); stroke-width: 2.5px; pointer-events: none; }
+.mismatch-list { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 11px; }
+.mismatch-list h4 { margin: 4px 0 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; }
+.mismatch-list h4.ins { color: #fb923c; } .mismatch-list h4.haz { color: #60a5fa; }
+.mismatch-list ul { list-style: none; margin: 0; padding: 0; }
+.mismatch-list li { cursor: pointer; padding: 1px 0; color: var(--ink); }
+.mismatch-list li span { font-family: var(--mono); color: var(--muted); font-size: 10px; }
+.mismatch-list li em { color: var(--muted); font-style: normal; font-size: 10px; }
+.mismatch-list p { grid-column: 1 / -1; }
+.link-chart .bar-storm { fill: #4ea8ff; } .link-chart .bar-loss { fill: #fb923c; }
+.link-axis { stroke: var(--line-strong); }
+.connector { stroke: var(--line-strong); stroke-width: 1; } .connector.is-flag { stroke: #f43f5e; stroke-width: 2; stroke-dasharray: 3 2; }
+.share-label { fill: var(--muted); font-size: 8.5px; font-family: var(--mono); }
+.year-tag { fill: var(--ink); font-size: 9px; font-family: var(--mono); paint-order: stroke; stroke: var(--panel); stroke-width: 3px; }
+.year-tag.is-flag { fill: #f43f5e; font-weight: 700; }
+.link-label { font-size: 8.5px; } .link-label--storm { fill: #4ea8ff; } .link-label--loss { fill: #fb923c; }
+.zip-key { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 9.5px; color: var(--muted); margin-bottom: 4px; }
+.zip-key i { width: 8px; height: 8px; display: inline-block; border-radius: 2px; margin-right: 3px; }
+.zip-table table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.zip-table th { text-align: left; color: var(--muted); font-weight: 500; font-size: 9.5px; padding: 2px 3px; border-bottom: 1px solid var(--line); }
+.zip-table td { padding: 3px; border-bottom: 1px solid var(--line); }
+.zip-table .num { text-align: right; font-family: var(--mono); }
+.zip-table .mono { font-family: var(--mono); }
+.zip-bar { display: flex; height: 9px; border-radius: 2px; overflow: hidden; background: #0f2028; min-width: 90px; }
+.muted { color: var(--muted); }
+
+.link-chart { max-height: 230px; }
+.link-label { font-size: 11px; font-weight: 600; }
+.share-label { font-size: 10px; }
+.year-tag { font-size: 11px; }

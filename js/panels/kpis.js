@@ -9,14 +9,14 @@ import { LENSES } from "../config.js";
 import { formatCount, formatMoney } from "../format.js";
 
 const TILES = [
-  { key: "reports", lens: "hazard", label: "Storm reports", format: formatCount },
-  { key: "significant", lens: "hazard", label: "Significant reports", format: formatCount },
-  { key: "ownerUnits", lens: "exposure", label: "Owner-occupied homes", format: formatCount },
-  { key: "pif", lens: "market", label: "HO policies in force", format: formatCount },
-  { key: "coverage", lens: "market", label: "Policies per owner home", format: (v) => d3.format(".2f")(v) },
-  { key: "nonrenewal", lens: "market", label: "Nonrenewals / 1k HO", format: (v) => d3.format(".1f")(v) },
   { key: "paidLoss", lens: "losses", label: "TDI paid losses / yr", format: formatMoney },
   { key: "lossPerPolicy", lens: "losses", label: "Paid loss / policy", format: formatMoney },
+  { key: "premium", lens: "market", label: "Avg premium (latest)", format: formatMoney },
+  { key: "pif", lens: "market", label: "HO policies in force", format: formatCount },
+  { key: "nonrenewal", lens: "market", label: "Nonrenewals / 1k HO", format: (v) => d3.format(".1f")(v) },
+  { key: "propertyValue", lens: "exposure", label: "Census property value", format: formatMoney },
+  { key: "reports", lens: "hazard", label: "Storm reports", format: formatCount },
+  { key: "noaaDamage", lens: "hazard", label: "NOAA damage (est.)", format: formatMoney },
 ];
 
 export function createKpis(container) {
@@ -27,8 +27,8 @@ export function createKpis(container) {
 
   function update(selected) {
     const values = {
-      reports: selected.eventCount, significant: selected.significant, ownerUnits: selected.ownerUnits,
-      pif: selected.pifHomeowners, coverage: selected.coverageRatio, nonrenewal: selected.nonrenewalRate,
+      reports: selected.eventCount, noaaDamage: selected.damageTotal, propertyValue: selected.propertyValue,
+      pif: selected.pifHomeowners, nonrenewal: selected.nonrenewalRate, premium: selected.premium,
       paidLoss: selected.paidLoss, lossPerPolicy: selected.lossPerPolicy,
     };
     tiles.select(".kpi__value").transition().duration(650).ease(d3.easeCubicOut).tween("text", function (tile) {

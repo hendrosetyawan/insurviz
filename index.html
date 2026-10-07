@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>InsurViz Texas · Storms, Homes and the Homeowners Insurance Market</title>
+  <title>InsurViz Texas · Severe Weather and Homeowners Insurance Loss Analytics</title>
   <meta name="description" content="3D visual analytics linking NOAA storm history, Census ACS housing exposure and Texas Department of Insurance market data for all 254 Texas counties." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -20,9 +20,9 @@
   <div id="splash" class="splash">
     <div class="splash__mark">◈</div>
     <div class="splash__name">INSURVIZ</div>
-    <div class="splash__sub">Texas · storms × homes × the homeowners insurance market</div>
+    <div class="splash__sub">Texas homeowners insurance losses × severe weather × property value · 2019–2025</div>
     <div class="splash__bar"><i></i></div>
-    <div id="loading" class="splash__status">Joining NOAA, Census ACS and Texas Department of Insurance data for 254 counties…</div>
+    <div id="loading" class="splash__status">Joining TDI insurance data, NOAA storm records and Census property values for 254 counties…</div>
   </div>
 
   <header class="topbar">
@@ -30,7 +30,7 @@
       <span class="brand__mark">◈</span>
       <div>
         <div class="brand__name">INSURVIZ <span class="brand__tx">TEXAS</span></div>
-        <div class="brand__sub">Severe weather, property exposure and homeowners insurance losses across Texas counties · Team 8</div>
+        <div class="brand__sub">Severe weather &amp; homeowners insurance loss analytics · Texas counties 2019–2025 · Team 8</div>
       </div>
     </div>
     <div id="kpis" class="kpis"></div>
@@ -74,13 +74,18 @@
   <main class="layout">
     <aside class="column column--left">
       <section class="panel" id="panel-r1">
-        <h2 class="panel__title"><span class="step">1</span><span class="req">R1</span> Overview: geographic comparison</h2>
-        <p class="panel__sub">Counties ranked by prism height (riskiest first), bars coloured like the map.</p>
+        <h2 class="panel__title"><span class="step">1</span><span class="req">R1</span> Overview: county ranking</h2>
+        <p class="panel__sub">Counties ranked by prism height (default: TDI paid homeowners losses per year), bars coloured like the map.</p>
         <div class="panel__body"></div>
       </section>
       <section class="panel" id="panel-anomalies">
         <h2 class="panel__title"><span class="step">3</span><span class="req req--losses">TDI</span> Detect anomalies: loss vs. baseline</h2>
         <p class="panel__sub">Counties whose paid loss per policy departs most from what storms, NOAA damage and home values would suggest.</p>
+        <div class="panel__body"></div>
+      </section>
+      <section class="panel" id="panel-zip">
+        <h2 class="panel__title"><span class="req req--market">TDI</span> ZIP codes: why insurers say no</h2>
+        <p class="panel__sub">TDI's HB 2067 ZIP data (public ZIP lookup launched 23 Sep 2026).</p>
         <div class="panel__body"></div>
       </section>
       <section class="panel" id="panel-reasons">
@@ -89,7 +94,7 @@
       </section>
       <section class="panel panel--note">
         <h2 class="panel__title">Read with care</h2>
-        <p>Four lenses, different periods: NOAA 2015–2025, ACS 5-year, TDI paid losses 2019–2025, TDI policies 2026 Q1, HB 2067 actions Apr–Jun 2026.</p>
+        <p>Analysis window 2019–2025, following TDI homeowners losses and premiums. Census ACS 5-year values; TDI policies 2026 Q1; HB 2067 actions Apr–Jun 2026.</p>
         <p class="caution">NOAA damage is a National Weather Service estimate, not insured loss. TDI nonrenewal counts are new and cover three months. Policies per owner home is a proxy and can exceed 1.</p>
         <p>NOAA layers here are hail, thunderstorm wind and tornado only. Hurricanes and floods are not shown.</p>
       </section>
@@ -111,6 +116,10 @@
           <div class="story__nav"><button class="button story__prev">← Back</button><button class="button button--accent story__next">Next →</button></div>
         </div>
       </div>
+      <section class="panel" id="panel-link">
+        <h2 class="panel__title"><span class="req req--losses">TDI</span>↔<span class="req">NOAA</span> Storm year vs. insured-loss year <em class="panel__hint">each year's share of 2019–2025 · flagged = years that disagree</em></h2>
+        <div class="panel__body"></div>
+      </section>
       <section class="panel" id="panel-losstrends">
         <h2 class="panel__title"><span class="req req--losses">TDI</span> Insured-loss trends 2019–2025 <em class="panel__hint">county vs Texas median · one axis per measure</em></h2>
         <div class="panel__body"></div>
@@ -124,6 +133,11 @@
     <aside class="column column--right">
       <section class="panel" id="panel-explain">
         <h2 class="panel__title"><span class="step">4</span> Explain: why is this county unusual?</h2>
+        <div class="panel__body"></div>
+      </section>
+      <section class="panel" id="panel-matrix">
+        <h2 class="panel__title"><span class="step">3</span> Mismatch: where hazard and insured loss disagree</h2>
+        <p class="panel__sub">Each dot is a county. On the diagonal storms and TDI losses agree; shaded corners = disagreement of ≥ 30 percentile points.</p>
         <div class="panel__body"></div>
       </section>
       <section class="panel" id="panel-profile">

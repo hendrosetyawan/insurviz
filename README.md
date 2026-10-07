@@ -134,3 +134,13 @@ InsurViz is an interactive visual analytics system for exploring the relationshi
 * **New panels:** *Detect anomalies* (ranked residuals), *Explain: why is this county unusual?* (deterministic, computed statements plus caveats), *Insured-loss trends 2019–2025* (small multiples vs Texas median, no dual axes), *Data & methods* dialog. The three-lens profile gains an *Insured losses* group, the KPIs add paid losses and loss per policy, and the guided story adds a discordance chapter.
 * **Workflow** markers: 1 Overview → 2 Compare → 3 Detect anomalies → 4 Explain → 5 Drill down. Links: `?county=Harris`, `?story=7`.
 * **Limits:** TDI losses cover homeowners policies only (no renters, condo, dwelling) and exclude TWIA wind/hail; TDI “Wind” = wind + hail. NOAA damage is an estimate, not insured loss. County premiums (TDI market overview, 2019–2025, policies with wind) are integrated as average premium, premium change, average coverage and premium per $1,000 of coverage; they come from TDI's public Tableau view and are stored in `raw/tdi_ho_premium_by_county.csv`. No loss ratio is computed (average premium per policy is not earned premium). Null values are never shown as zero.
+
+## Insurance-first view (2019–2025)
+
+The analysis window now follows TDI's homeowners data (2019–2025). The default 3D view shows **TDI paid homeowners losses per year** (height) and the **hazard–insurance mismatch** (colour: Texas percentile of paid loss per policy minus percentile of NOAA storm reports per 1,000 km²; red = insured loss higher than hazard suggests, blue = storms frequent but insured loss low).
+
+* **Mismatch matrix:** every county's hazard percentile vs insured-loss percentile, with the ≥ 30-point disagreements shaded, labelled and listed.
+* **Storm year vs insured-loss year:** mirrored bars of each year's share of NOAA-reported damage (up) and of TDI paid losses (down) for a county or Texas; years whose shares differ by ≥ 20 points are flagged (e.g. Texas 2019 and 2023; Harris 2021, the February freeze).
+* **ZIP codes: why insurers say no:** HB 2067 nonrenewals + declinations per 1,000 homeowners policies and reason mix by ZIP, the same data as TDI's ZIP lookup launched 23 Sep 2026 (`data/hb2067_zip.json`, built by `scripts/build_hb2067_zip.py`).
+* **Census property value:** owner-occupied units × median home value (ACS) appears as a KPI, metric and profile row; *paid loss per $1,000 of property value* and *insured coverage ÷ Census home value* (insurance-to-value proxy) are available as metrics.
+* Insurance-first KPIs (paid losses, loss per policy, average premium, policies, nonrenewals, Census property value), an insurance ticker (largest paid-loss county-years next to that year's NOAA damage) and an insurance-first guided story.
