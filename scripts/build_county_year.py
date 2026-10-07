@@ -193,12 +193,17 @@ def load_premium(raw, name_to_fips):
     prem_c = pick("average premium (with wind)", "avg premium (with wind)", "average premium")
     pol_c = pick("policies (with wind)", "policies")
     cov_c = pick("average coverage", "avg coverage")
+    col = lambda name: money(p[pick(name)]) if pick(name) else np.nan
     out = pd.DataFrame({
         "year": p[year_c].astype(int),
         "county_fips": p[county_c].str.replace(" County", "", regex=False).str.strip().str.lower().map(name_to_fips),
-        "premium_per_policy": money(p[prem_c]) if prem_c else np.nan,
+        "premium_per_policy": money(p[prem_c]) if prem_c else np.nan,       # avg annual premium, policies with wind
         "premium_policies_with_wind": money(p[pol_c]) if pol_c else np.nan,
-        "average_coverage": money(p[cov_c]) if cov_c else np.nan,
+        "average_coverage": money(p[cov_c]) if cov_c else np.nan,          # avg insured amount, policies with wind
+        "premium_companies": col("companies"),
+        "premium_no_wind": col("average premium (no wind)"), "policies_no_wind": col("policies (no wind)"),
+        "premium_twia": col("average twia premium"), "policies_twia": col("twia policies"),
+        "premium_fair": col("average fair premium"), "policies_fair": col("fair policies"),
     }).dropna(subset=["county_fips"])
     out["county_fips"] = out.county_fips.astype(int)
     return out

@@ -98,6 +98,15 @@ export const METRICS = {
     note: "TDI loss type “Wind” (= wind + hail) ÷ total paid losses" },
   baselineRatio: { lens: "losses", label: "Loss per policy vs. baseline (×)", scale: "linear", risk: "high", format: "times",
     note: "observed ÷ expected loss per policy from an exploratory regression on storm density, NOAA damage per home and home value; not causal" },
+  // premiums (TDI homeowners market overview, policies with wind coverage; latest year in the window)
+  premiumPerPolicy: { lens: "market", label: "Average annual premium (with wind)", scale: "linear", risk: "high", format: "money",
+    note: "TDI average premium for homeowners policies that include wind coverage; latest selected year (2019–2025)" },
+  premiumChange: { lens: "market", label: "Premium change over selected years", scale: "linear", risk: "high", format: "percent",
+    note: "average premium, last ÷ first selected year (within 2019–2025) − 1" },
+  averageCoverage: { lens: "market", label: "Average insured coverage (with wind)", scale: "sqrt", risk: "high", format: "money",
+    note: "TDI average insured property amount, policies with wind coverage (insured value, not market value)" },
+  premiumPer1kCoverage: { lens: "market", label: "Premium per $1,000 of coverage", scale: "linear", risk: "high", format: "rate2",
+    note: "average premium ÷ average coverage × 1,000: a price-per-coverage proxy (same policies: compatible)" },
   stormDensity: { lens: "hazard", label: "Storm reports per 1,000 km² per year", scale: "linear", risk: "high", format: "rate2", filtered: true,
     note: "reports per year ÷ county area (from boundary geometry)" },
 };

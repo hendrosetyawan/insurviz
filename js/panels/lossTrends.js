@@ -2,7 +2,8 @@
  * lossTrends.js  ·  Insured-loss trends, 2019–2025
  * ---------------------------------------------------------------------------
  * Small multiples (one measure per panel, its own axis, no dual axes):
- * storm reports, NOAA damage, TDI paid losses and loss per policy for the
+ * storm reports, NOAA damage, TDI paid losses, loss per policy and average
+ * premium (policies with wind) for the
  * selected county (or the Texas total / median when nothing is selected),
  * with the Texas county median as a dashed reference line.
  */
@@ -16,6 +17,7 @@ const PANELS = [
   { key: "noaa_property_damage", label: "NOAA damage (estimate)", fmt: safe(formatMoney) },
   { key: "tdi_paid_loss", label: "TDI paid losses", fmt: safe(formatMoney) },
   { key: "loss_per_policy", label: "TDI loss per policy", fmt: safe(formatMoney) },
+  { key: "premium_per_policy", label: "Avg premium (with wind)", fmt: safe(formatMoney) },
 ];
 
 export function createLossTrends(container, { countyList }) {

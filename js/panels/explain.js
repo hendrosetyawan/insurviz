@@ -73,6 +73,12 @@ export function createExplain(container) {
     if (v.windHailLossShare != null && txAll > 0 && Math.abs(v.windHailLossShare - txWind / txAll) > 0.15) {
       add(60 * Math.abs(v.windHailLossShare - txWind / txAll), `Wind & hail made up <b>${formatPercent(v.windHailLossShare)}</b> of paid homeowners losses (Texas: ${formatPercent(txWind / txAll)}).`);
     }
+    // 8b. premium change vs Texas, and alongside loss per policy (premium data: policies with wind)
+    if (v.premiumChange != null) {
+      const txChange = median("premiumChange");
+      const diff = v.premiumChange - (txChange ?? 0);
+      add(Math.abs(diff) > 0.15 ? 50 * Math.abs(diff) : 5, `Average premium (with wind) went from ${v.premiumWindow[0]} to ${v.premiumWindow[1]} by <b>${formatPercent(v.premiumChange)}</b> to ${formatMoney(v.premiumPerPolicy)} (Texas county median change: ${formatPercent(txChange)}); paid loss per policy over the period was ${formatMoney(v.lossPerPolicy)}.`);
+    }
     // 9. peers (closest in storm density and median home value percentiles)
     const me = [pct("stormDensity"), pct("medianHomeValue")];
     if (me.every((x) => x != null) && v.lossPerPolicy != null) {

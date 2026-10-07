@@ -16,8 +16,9 @@ const safeDiv = (a, b) => (a == null || b == null || !(b > 0) ? null : a / b);
 export function lossMetrics(county, state) {
   const from = Math.max(state.yearFrom, LOSS_YEARS[0]), to = Math.min(state.yearTo, LOSS_YEARS[LOSS_YEARS.length - 1]);
   const rows = county.lossRows.filter((r) => r.year >= from && r.year <= to);
+  const premium = premiumMetrics(rows);
   const paid = rows.filter((r) => r.tdi_paid_loss != null);
-  if (!paid.length) return { paidLoss: null, lossPerPolicy: null, lossPerOwnerHome: null, lossPer1kValue: null, windHailLossShare: null, avgPolicies: null, lossYears: 0, lossWindow: [from, to] };
+  if (!paid.length) return { ...premium, paidLoss: null, lossPerPolicy: null, lossPerOwnerHome: null, lossPer1kValue: null, windHailLossShare: null, avgPolicies: null, lossYears: 0, lossWindow: [from, to] };
   const total = d3.sum(paid, (r) => r.tdi_paid_loss);
   const policyYears = d3.sum(paid, (r) => r.active_policies || 0);
   const perYear = total / paid.length;
@@ -25,6 +26,7 @@ export function lossMetrics(county, state) {
   const exposure = latest.owner_occupied_units && latest.median_home_value ? latest.owner_occupied_units * latest.median_home_value : null;
   const wind = d3.sum(paid, (r) => r.tdi_paid_wind_hail || 0);
   return {
+    ...premium,
     paidLoss: perYear,
     lossPerPolicy: safeDiv(total, policyYears),
     lossPerOwnerHome: safeDiv(perYear, latest.owner_occupied_units),
@@ -34,6 +36,20 @@ export function lossMetrics(county, state) {
     lossYears: paid.length, lossWindow: [from, to],
     lossTypes: { wind: wind, water: d3.sum(paid, (r) => r.tdi_paid_water || 0), fire: d3.sum(paid, (r) => r.tdi_paid_fire || 0), other: d3.sum(paid, (r) => r.tdi_paid_other || 0) },
     negativeYears: paid.filter((r) => r.tdi_paid_loss < 0).map((r) => r.year),
+  };
+}
+
+/** Premium metrics (TDI, policies with wind): level in the latest year, change across the window. */
+function premiumMetrics(rows) {
+  const p = rows.filter((r) => r.premium_per_policy != null);
+  if (!p.length) return { premiumPerPolicy: null, premiumChange: null, averageCoverage: null, premiumPer1kCoverage: null };
+  const first = p[0], last = p[p.length - 1];
+  return {
+    premiumPerPolicy: last.premium_per_policy,
+    premiumChange: p.length >= 2 && first.premium_per_policy > 0 ? last.premium_per_policy / first.premium_per_policy - 1 : null,
+    premiumWindow: [first.year, last.year],
+    averageCoverage: last.average_coverage ?? null,
+    premiumPer1kCoverage: last.average_coverage > 0 ? (last.premium_per_policy / last.average_coverage) * 1000 : null,
   };
 }
 

@@ -33,7 +33,7 @@
   "San Patricio",
   "Willacy"
  ],
- "premiumAvailable": false,
+ "premiumAvailable": true,
  "quality": {
   "noaaEvents": 17120,
   "noaaDamageBlankShare": 0.1562,
