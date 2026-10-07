@@ -1,126 +1,75 @@
-# InsurViz Texas · Where severe storms meet the homeowners insurance market
+# InsurViz · Severe weather and homeowners insurance losses across Texas
 
-3D visual analytics for all 254 Texas counties, joining three public lenses
-that are usually looked at separately:
+**InsurViz is an interactive visual analytics system for exploring the relationship between severe weather, property exposure, and homeowners insurance losses across Texas counties.**
 
-| Lens | Source | What it says |
+Live: https://insurviz.web.app · deep links: `?county=Harris&compare=Dallas,Tarrant&metric=residual`
+
+InsurViz integrates event-level severe-weather records, county-level homeowners insurance outcomes, and property exposure to support interactive discovery of geographic and temporal **discordance** between hazard and insured loss. Coordinated views let an analyst move from statewide patterns to anomalous counties and trace those patterns back to contributing hazards and extreme events.
+
+**Target user:** a Texas property-insurance risk analyst asking not only *where are losses high?* but *why does this county look unusual?*
+
+**Workflow:** Overview → Compare → Detect anomalies → Explain → Drill down
+(WHERE is something unusual → WHAT metric makes it unusual → HOW does it compare with exposure and storm activity → WHICH peril contributes → WHEN did it emerge → WHICH events contributed).
+
+## Research questions
+
+| | Question | Where in the interface |
 |---|---|---|
-| **Hazard** | NOAA NCEI Storm Events, hail + thunderstorm wind + tornado, 2015–2025 (25,867 Texas reports) | what the weather did |
-| **Exposure** | U.S. Census Bureau ACS 5-year 2020–2024 (housing units, owner-occupied homes, median value, year built, income) | what homes are in harm's way |
-| **Insurance market** | Texas Department of Insurance via data.texas.gov: homeowners policies in force (2026 Q1), **HB 2067** declinations / cancellations / nonrenewals and their reasons (Apr–Jun 2026), homeowners complaints | how coverage is behaving |
+| RQ1 | How do storm activity, exposure and insured losses vary across counties? | County map (switchable metric) |
+| RQ2 | Do counties with more storm activity have greater insured losses? | Hazard vs insurance scatterplot (fit line, ±1.5 SD band, r) |
+| RQ3 | How does the picture change when losses are normalised? | Map metrics grouped *absolute* vs *normalised*; profile and explanation flag rank changes |
+| RQ4 | Which counties are unusually high or low given storms and exposure? | Exploratory baseline residuals, anomaly list, discordance types |
+| RQ5 | Which perils, years and events drive an unusual pattern? | Profile compositions, annual small multiples, event drill-down |
 
-**Live:** https://insurviz.web.app · guided story: https://insurviz.web.app/?story=1
+## Data (county FIPS × year, 2019–2025)
 
-## Positioning
+| Dataset | Use | Granularity | Version | Key limitations |
+|---|---|---|---|---|
+| NOAA NCEI Storm Events (details files) | Hazard: hail, thunderstorm wind, tornado; counts, magnitude, property/crop damage, casualties, lat/lon | Event → county × year | files c2026-03-23 to c2026-08-19 | Damage is an NWS **estimate, not insured loss**; 15.6% of events have blank damage (treated as unknown, not $0) |
+| TDI, *Texas homeowners losses by county* | Insurance outcome: paid losses by loss type, policies in force | County × calendar year | page updated 6/22/2026 | Homeowners only (no renters, condo, dwelling); **excludes TWIA wind/hail**; TDI "Wind" = wind + hail (verified against statewide figures) |
+| TDI, *Homeowners market overview* | Premiums | County × year | – | **Not integrated**: export only via an interactive Tableau view behind a bot check. Premium metrics show *n/a*; add the export as `raw/tdi_ho_premium_by_county.csv` and rebuild |
+| Census ACS 5-year (table-based summary files) | Exposure normalisation: housing units, owner-occupied units, median home value, households, population, income | County | vintages 2017–2021 to 2020–2024 | Year → vintage mapping is stored per row (`acs_vintage`); 2019–2020 use 2017–2021, 2025 uses 2020–2024 |
 
-Texas logs more hail, thunderstorm-wind and tornado reports than any other
-state in NOAA's Storm Events Database (2015–2025), and in 2026 its regulator
-began publishing something new: under **HB 2067**
-(89th Legislature), insurers report, by ZIP code and month, every homeowners
-declination, cancellation and nonrenewal *and the reason*. Reasons include
-"exposure to loss – wind/hail/hurricane" and "condition of property – roof".
+Conventions: **0 = measured zero, null = unavailable.** Statewide TDI totals reconcile with TDI's published figures (e.g. 2025: $8.75B). One county-year is missing (Loving 2019). Eighteen TDI cells report net negative paid losses and are kept as reported.
 
-InsurViz puts that market signal next to the storm record and the housing
-stock, county by county. It is built for regulators, insurance analysts,
-researchers and journalists who ask:
+### Derived metrics and compatibility
 
-* Are insurers pulling back where storms actually hit, or somewhere else?
-* Where is homeowners coverage already thin relative to the number of owner-occupied homes?
-* What reasons do insurers give, and do weather reasons line up with weather history?
-
-### What is new
-
-1. **Three lenses, one county.** Hazard, exposure and market are never folded
-   into a single risk score. The 3D prism map encodes two lenses at once
-   (height and colour, any metric). The three-lens profile shows every lens with
-   its Texas percentile.
-2. **TDI's new HB 2067 data, beside the storm record.** Nonrenewal and
-   declination rates per 1,000 homeowners policies (ZIP → county via the Census
-   ZCTA relationship file) and reason shares, published since spring 2026.
-3. **Coverage-gap proxy.** TDI homeowners policies in force ÷ ACS owner-occupied homes.
-4. **Findings it surfaces** (from the data, see the guided story):
-   * Nonrenewals concentrate on the coast (Cameron, Victoria, Orange, Nueces),
-     not in the hail-heaviest counties.
-   * Notices citing wind/hail/hurricane are most common in coastal counties
-     (Aransas, Harris, Chambers). Their rank correlation with hail reports per
-     home is *negative*, pointing to hurricane exposure rather than hail history.
-   * Hail-heavy rural counties (e.g. Archer, Jones) have about 0.4 homeowners
-     policies per owner-occupied home, against 0.83 statewide.
-
-## Views (linked)
-
-| | View | Requirement |
+| Metric | Numerator / denominator | Compatibility |
 |---|---|---|
-| 3D | County prisms (height + colour = any two metrics), storm lights (every report on its county's roof), damage pillars and shockwaves, TWIA coastal outline | R1, R2 |
-| | Ranking + county search | R1 Geographic comparison |
-| | Three-lens profile with Texas percentiles | all lenses |
-| | Height-vs-colour scatter with quadrant medians, brushing and Spearman ρ | lens comparison |
-| | Peril composition (reports vs NOAA damage) | R2 Peril composition |
-| | Yearly storm reports + statewide TDI homeowners complaints; radial peril clock | R3 Temporal change |
-| | Why insurers say no (HB 2067 reasons, weather reasons highlighted) | market lens |
-| | Most damaging reports with NWS narratives, fly-to | R4 Event investigation |
-| | Guided story (7 chapters, numbers computed live), `?story=N` deep links | presentation |
+| Loss per policy | TDI paid HO losses ÷ TDI HO policies in force | compatible |
+| Loss per owner-occupied home | TDI paid HO losses ÷ ACS owner-occupied units | approximate |
+| Loss per housing unit | TDI paid HO losses ÷ ACS housing units | mixed (crude) |
+| Loss per $1,000 of estimated home value | TDI paid HO losses ÷ (ACS owner units × median value) | estimated |
+| NOAA damage per event, per housing unit, top-1/3/5 event share | NOAA reported damage | estimate of all property damage |
+| Loss ratio | – | **not computed** (no compatible county premium) |
 
-## Caveats
+## Anomaly baseline (exploratory, not causal)
 
-* **Different periods:** NOAA 2015–2025, ACS 2020–2024, policies in force
-  2026 Q1, HB 2067 actions Apr–Jun 2026 (three months), HB 2067 policy counts as of
-  2025-12-31.
-* **NOAA damage** is a National Weather Service estimate, **not insured loss**.
-* **NOAA layers** are hail, thunderstorm wind and tornado only. Hurricanes and
-  floods are not included.
-* **Coverage ratio** is a proxy and can exceed 1: policies are counted by
-  TDI's county assignment, and some homes carry dwelling, farm or surplus-lines
-  cover instead.
-* **ZIP → county** uses the largest land-area overlap (99.9% of policies matched).
-* **Correlations** are rank associations across counties, not causal effects.
-* Rates are hidden (grey) for counties with fewer than 500 homeowners policies.
+`log(loss per policy) ~ log(1 + storm events per 1,000 km² per year) + log(1 + NOAA damage per owner home) + log(median home value)`, OLS on counties with ≥ 500 policies outside the TWIA area. Residual ratio = observed ÷ expected; |z| ≥ 1.5 flags an anomaly. Discordance types use Texas percentiles (e.g. *high storm · low loss*, *low exposure · high normalised loss*). The "Why is this county unusual?" panel lists deterministic, computed statements (percentile gaps, ratio to the Texas median and to peer counties, dominant peril, top-3 event share, peak years, loss mix) plus data caveats.
 
-## Rebuilding the data
+## Interpretation
+
+NOAA estimated damage is not insured loss. Associations are not causal effects. Premiums and losses reflect many factors beyond recent local storms (construction, roof age, deductibles, policy forms, claim practices, market mix). The datasets use different reporting procedures and time definitions. Missing values are never treated as zero.
+
+## Rebuild
 
 ```bash
-mkdir -p raw && cd raw
-# Census ACS 5-year 2024 county tables (keyless summary files; keep Texas rows)
-for t in b01003 b25001 b25003 b25077 b25035 b19013; do
-  curl -s -o $t.dat https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/acsdt5y2024-$t.dat
-  head -1 $t.dat > tx_$t.csv && grep '^0500000US48' $t.dat >> tx_$t.csv && rm $t.dat
-done
-curl -s -o zcta_county.txt https://www2.census.gov/geo/docs/maps-data/data/rel2020/zcta520/tab20_zcta520_county20_natl.txt
-curl -s -o counties-10m.json https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json
-# Texas Department of Insurance (data.texas.gov)
-curl -s -o tdi_pif_county.csv        "https://data.texas.gov/resource/8mvr-4gj9.csv?\$limit=20000"
-curl -s -o tdi_hb2067_policies.csv   "https://data.texas.gov/resource/vyxq-akit.csv?\$limit=100000"
-curl -s -o tdi_hb2067_actual.csv     "https://data.texas.gov/resource/m7yx-zxf2.csv?\$limit=100000"
-curl -s -o tdi_hb2067_reasons.csv    "https://data.texas.gov/resource/3efz-d6qn.csv?\$select=action_type,policy_type,reason_code,zip,sum(policy_count)%20as%20n&\$group=action_type,policy_type,reason_code,zip&\$limit=500000"
-curl -s -o tdi_complaints_home_monthly.csv "https://data.texas.gov/resource/ubdr-4uff.csv?\$select=date_trunc_ym(received_date)%20as%20month,reason,count(*)%20as%20n&\$where=coverage_type='Homeowners'&\$group=month,reason&\$limit=200000"
-cd ..
-python3 scripts/build_texas.py --raw raw --noaa path/to/noaa_events.pkl
+python3 scripts/build_county_year.py --raw raw --out data
 ```
 
-Code tables (action types 80/81/82, policy types, reason letters) come from the
-TDI *Texas Statistical Plan for Residential Risks* (effective 2026), Sections E–G.
+`raw/` needs `noaa/tx_YYYY.csv` (Texas rows of the NCEI details files 2019–2025), `tdi_ho_losses_by_county.csv` (from https://www.tdi.texas.gov/general/documents/home-owners-losses-by-county-25.csv), `acs/tx_{2021..2024}_{b01003,b11001,b25001,b25002,b25003,b25077,b19013}.csv` (ACS table-based summary files, Texas county rows) and `counties-10m.json` (us-atlas).
 
-## Run locally
-
-```bash
-python3 -m http.server 8000
-```
+Run locally: `python3 -m http.server 8000`.
 
 ## Code
 
 ```
-js/config.js            settings + metric catalogue (lens, scale, risk direction, notes)
-js/data.js              load files, Texas projection, project counties and reports
-js/metrics.js           join lenses per county, one-pass aggregation, percentiles
-js/scales.js            prism height and quantile colour scales (shared by all views)
-js/state.js             store that links the views
-js/story.js             guided story chapters
-js/scene/texasScene.js  Three.js stage: prisms, picking, camera fly-to, bloom
-js/scene/eventParticles.js, shockwaves.js, radarSweep.js, geo.js
-js/panels/*.js          D3 panels: kpis, ranking, profile, scatter, composition,
-                        timeline (+ peril clock), reasons, eventTable, ticker, legend
-scripts/build_texas.py  builds data/tx_*.json from the raw sources
+js/config.js        metric catalogue (definitions, units, compatibility), settings
+js/data.js          load county-year table, events, geometry
+js/model.js         period aggregation, percentiles, baseline regression, discordance, peers
+js/explain.js       deterministic "why unusual" findings
+js/views/*.js       map, scatter, temporal, profile, explainPanel, anomalies, events, compare, methodology
+scripts/build_county_year.py   NOAA + TDI + ACS integration
 ```
 
-Built with Three.js and D3.js. CSCE 679 Data Visualization, Team 8 (Texas A&M):
-Aadi Mahajan · Abhinav Sheshadri · Hendro Setyawan · MD Imtiaz Mahi.
+Built with D3.js. CSCE 679 Data Visualization, Team 8 (Texas A&M): Aadi Mahajan · Abhinav Sheshadri · Hendro Setyawan · MD Imtiaz Mahi.

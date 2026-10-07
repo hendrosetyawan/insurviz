@@ -1,0 +1,167 @@
+{
+ "years": [
+  2019,
+  2020,
+  2021,
+  2022,
+  2023,
+  2024,
+  2025
+ ],
+ "acsVintage": {
+  "2019": 2021,
+  "2020": 2021,
+  "2021": 2021,
+  "2022": 2022,
+  "2023": 2023,
+  "2024": 2024,
+  "2025": 2024
+ },
+ "twiaCounties": [
+  "Aransas",
+  "Brazoria",
+  "Calhoun",
+  "Cameron",
+  "Chambers",
+  "Galveston",
+  "Jefferson",
+  "Kenedy",
+  "Kleberg",
+  "Matagorda",
+  "Nueces",
+  "Refugio",
+  "San Patricio",
+  "Willacy"
+ ],
+ "premiumAvailable": false,
+ "quality": {
+  "noaaEvents": 17120,
+  "noaaDamageBlankShare": 0.1562,
+  "tdiUnmatchedCounties": [],
+  "tdiMissingCountyYears": [
+   [
+    "Loving",
+    2019
+   ]
+  ],
+  "tdiNegativePaidLosses": [
+   [
+    2019,
+    "Bosque County",
+    "Other",
+    -264959
+   ],
+   [
+    2019,
+    "Karnes County",
+    "Fire",
+    -13501
+   ],
+   [
+    2020,
+    "Martin County",
+    "Other",
+    -16713
+   ],
+   [
+    2020,
+    "Medina County",
+    "Fire",
+    -63793
+   ],
+   [
+    2021,
+    "Presidio County",
+    "Water",
+    -23271
+   ],
+   [
+    2021,
+    "Real County",
+    "Other",
+    -8004
+   ],
+   [
+    2021,
+    "Red River County",
+    "Other",
+    -452
+   ],
+   [
+    2022,
+    "Castro County",
+    "Other",
+    -5907
+   ],
+   [
+    2023,
+    "Bailey County",
+    "Other",
+    -6626
+   ],
+   [
+    2023,
+    "Throckmorton County",
+    "Water",
+    -6091
+   ],
+   [
+    2024,
+    "Archer County",
+    "Fire",
+    -167356
+   ],
+   [
+    2025,
+    "Dickens County",
+    "Fire",
+    -6470
+   ],
+   [
+    2025,
+    "Eastland County",
+    "Fire",
+    -880085
+   ],
+   [
+    2025,
+    "Eastland County",
+    "Other",
+    -98950
+   ],
+   [
+    2025,
+    "Garza County",
+    "Fire",
+    -72937
+   ],
+   [
+    2025,
+    "Gray County",
+    "Fire",
+    -19033
+   ],
+   [
+    2025,
+    "Hemphill County",
+    "Fire",
+    -5243026
+   ],
+   [
+    2025,
+    "Hemphill County",
+    "Total Paid Loss",
+    -4571507
+   ]
+  ],
+  "noaaFiles": [
+   "tx_2019.csv",
+   "tx_2020.csv",
+   "tx_2021.csv",
+   "tx_2022.csv",
+   "tx_2023.csv",
+   "tx_2024.csv",
+   "tx_2025.csv"
+  ]
+ }
+}
