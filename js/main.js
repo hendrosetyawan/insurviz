@@ -1,206 +1,245 @@
 /**
  * main.js
  * ---------------------------------------------------------------------------
- * Loads the data, builds every view, and links them through one store:
- * any filter or selection change re-aggregates the events once and pushes
- * the result to the 3D map and the R1–R4 panels.
+ * Loads the Texas data, builds every view and links them through one store.
+ * Any change of lens, filter or selection re-aggregates once and pushes the
+ * result to the 3D stage and all D3 panels.
  */
 
-import { DEFAULT_VIEW_MODE, METRICS, PANELS, PERILS, PLAYBACK_MS, VIEW_MODES } from "./config.js";
+import { DEFAULT_VIEW_MODE, FIRST_YEAR, LAST_YEAR, LENSES, METRICS, PANELS, PERILS, PLAYBACK_MS, VIEW_MODES } from "./config.js";
 import { loadAll } from "./data.js";
-import { createStore } from "./state.js";
-import { aggregate, buildHexBins } from "./aggregate.js";
-import { formatMetric, formatCount } from "./format.js";
-import { createStormScene } from "./scene/stormScene.js";
+import { createStore, initialState, inSelection } from "./state.js";
+import { aggregate, prepareCounties } from "./metrics.js";
+import { makeColorScale, makeHeightScale } from "./scales.js";
+import { formatMetric } from "./format.js";
+import { createTexasScene } from "./scene/texasScene.js";
 import { createKpis } from "./panels/kpis.js";
 import { createRanking } from "./panels/ranking.js";
+import { createProfile } from "./panels/profile.js";
+import { createScatter } from "./panels/scatter.js";
 import { createComposition } from "./panels/composition.js";
 import { createTimeline } from "./panels/timeline.js";
+import { createReasons } from "./panels/reasons.js";
 import { createEventTable } from "./panels/eventTable.js";
 import { createTicker } from "./panels/ticker.js";
+import { createLegend } from "./panels/legend.js";
+import { buildChapters, createStory } from "./story.js";
 
 const $ = (selector) => document.querySelector(selector);
 
-/** The state each hexagon mostly falls in (for tooltips and labels). */
-function majorityStatePerBin(events, bins) {
-  const counts = new Map();
-  const { county } = events.columns;
-  for (let i = 0; i < events.count; i++) {
-    const bin = bins.binIndex[i];
-    if (bin < 0) continue;
-    const key = bin * 100 + Math.floor(county[i] / 1000);
-    counts.set(key, (counts.get(key) || 0) + 1);
-  }
-  const best = new Int32Array(bins.centers.length);
-  const bestCount = new Int32Array(bins.centers.length);
-  for (const [key, count] of counts) {
-    const bin = Math.floor(key / 100);
-    if (count > bestCount[bin]) { bestCount[bin] = count; best[bin] = key % 100; }
-  }
-  return best;
+/** Metric picker with one <optgroup> per lens. */
+function fillMetricSelect(select, value) {
+  select.innerHTML = Object.entries(LENSES).map(([lens, l]) =>
+    `<optgroup label="${l.label} · ${l.source}">${Object.entries(METRICS).filter(([, m]) => m.lens === lens)
+      .map(([key, m]) => `<option value="${key}">${m.label}</option>`).join("")}</optgroup>`).join("");
+  select.value = value;
+}
+
+/** Selection-level values for the profile (sums, and weighted rates/medians). */
+function selectionProfile(sel, state, countyValues, countyList) {
+  const years = state.yearTo - state.yearFrom + 1;
+  const weighted = (field) => {
+    let w = 0, s = 0;
+    for (const c of sel.counties) { const v = c.data[field], o = c.data.ownerUnits || 0; if (v != null) { s += v * o; w += o; } }
+    return w ? s / w : null;
+  };
+  if (sel.counties.length === 1) return countyValues[countyList.indexOf(sel.counties[0])];
+  return {
+    significantPerYear: sel.significant / years,
+    reportsPer1kHomes: sel.housingUnits ? (sel.eventCount / years / sel.housingUnits) * 1000 : null,
+    noaaDamage: sel.damageTotal,
+    ownerUnits: sel.ownerUnits,
+    medianHomeValue: weighted("medianHomeValue"),
+    medianYearBuilt: weighted("medianYearBuilt"),
+    coverageRatio: sel.coverageRatio,
+    nonrenewalRate: sel.nonrenewalRate,
+    windHailShare: sel.notices ? (sel.reasons.G || 0) / sel.notices : null,
+    roofShare: sel.notices ? (sel.reasons.M || 0) / sel.notices : null,
+  };
 }
 
 async function start() {
   const data = await loadAll();
-  const { events } = data;
-  const firstYear = events.meta.firstYear, lastYear = events.meta.lastYear;
-  const bins = buildHexBins(events);
-  const binState = majorityStatePerBin(events, bins);
-  const store = createStore(firstYear, lastYear);
-  let latest = null; // last aggregation result (used by the tooltip)
-  const visibility = new Float32Array(events.count); // per-event brightness for the light map
+  const { countyList, events } = data;
+  prepareCounties(countyList);
+  const store = createStore();
+  const visibility = new Float32Array(events.count);
+  let latest = null, colorScale = null, colors = [];
 
-  /* ---------- views */
+  /* ---------- 3D stage */
   const tooltip = $("#tooltip");
-  const scene = createStormScene($("#scene"), {
-    states: data.states, bins, events,
-    onHover: (binId, event) => {
-      if (binId == null || !latest) { tooltip.hidden = true; return; }
-      const values = Array.from(latest.hexValues.subarray(binId * 3, binId * 3 + 3));
-      const metric = store.get().metric;
-      tooltip.hidden = false;
-      tooltip.style.left = `${event.clientX + 14}px`;
-      tooltip.style.top = `${event.clientY + 14}px`;
-      tooltip.innerHTML = `<b>${data.stateNames.get(binState[binId]) || "—"}</b> · ${METRICS[metric].label}
-        <div class="tooltip__total">${formatMetric(metric, values[0] + values[1] + values[2])}</div>
-        ${PERILS.map((p, i) => `<div><span class="swatch" style="background:${p.color}"></span>${p.label}: ${formatMetric(metric, values[i])}</div>`).join("")}
-        <div class="tooltip__hint">Click to select this cell</div>`;
-    },
-    onSelect: (binId) => {
-      store.set({ selection: binId == null ? { type: "all" } : { type: "hex", id: binId }, focusEvent: null });
-    },
+  function showCountyTooltip(index, event) {
+    if (index == null || !latest) { tooltip.hidden = true; return; }
+    const county = countyList[index], v = latest.values[index], st = store.get();
+    const line = (m) => `<div><span class="lens-tag" style="--lens:${LENSES[METRICS[m].lens].color}">${LENSES[METRICS[m].lens].label}</span>${METRICS[m].label}: <b>${formatMetric(m, v[m])}</b></div>`;
+    tooltip.hidden = false;
+    tooltip.style.left = `${event.clientX + 14}px`;
+    tooltip.style.top = `${event.clientY + 14}px`;
+    tooltip.innerHTML = `<b>${county.name} County</b>${data.twia.has(county.fips) ? ' <span class="twia-tag">TWIA area</span>' : ""}
+      ${[...new Set([st.heightMetric, st.colorMetric, "significantPerYear", "ownerUnits", "coverageRatio", "nonrenewalRate"])].map(line).join("")}
+      <div class="tooltip__hint">Click to select</div>`;
+  }
+  const scene = createTexasScene($("#scene"), data, {
+    onHover: showCountyTooltip,
+    onSelect: (index) => store.set({ selection: index == null ? { type: "all" } : { type: "county", fips: countyList[index].fips }, focusEvent: null }),
   });
 
+  /* ---------- panels */
+  const selectCounty = (fips, fly = true) => {
+    store.set({ selection: { type: "county", fips }, focusEvent: null });
+    if (fly) scene.frameCounties([data.countyIndex.get(fips)]);
+  };
   const kpis = createKpis($("#kpis"));
-  const ranking = createRanking($("#panel-r1 .panel__body"), {
-    stateNames: data.stateNames, statePopulation: data.statePopulation,
-    onSelectState: (fips) => store.set({ selection: { type: "state", fips }, focusEvent: null }),
+  const legend = createLegend($("#legend"));
+  const ranking = createRanking($("#panel-r1 .panel__body"), { countyList, onSelectCounty: selectCounty });
+  const profile = createProfile($("#panel-profile .panel__body"), {
+    onMetricClick: (metric) => { store.set({ colorMetric: metric }); $("#color-metric").value = metric; },
+  });
+  const scatter = createScatter($("#panel-scatter .panel__body"), {
+    onBrush: (list) => { store.set({ selection: { type: "set", fips: list }, focusEvent: null }); scene.frameCounties(list.map((f) => data.countyIndex.get(f))); },
+    onPick: (fips) => selectCounty(fips),
+    onHover: showCountyTooltip,
   });
   const composition = createComposition($("#panel-r2 .panel__body"));
   const timeline = createTimeline($("#panel-r3 .panel__body"), {
-    firstYear, onPickYear: (year) => { stopPlayback(); store.set({ yearFrom: year, yearTo: year }); syncYearInputs(); },
+    complaints: data.complaints,
+    onPickYear: (year) => { stopPlayback(); store.set({ yearFrom: year, yearTo: year }); syncControls(); },
   });
+  const reasons = createReasons($("#panel-reasons .panel__body"), { reasonLabels: data.meta.reasons });
   const eventTable = createEventTable($("#panel-r4 .panel__body"), {
-    events, details: data.details, stateNames: data.stateNames, countyNames: data.countyNames,
-    onFocusEvent: (index) => store.set({ focusEvent: store.get().focusEvent === index ? null : index }),
+    events, countyList,
+    onFocusEvent: (index) => { const next = store.get().focusEvent === index ? null : index; store.set({ focusEvent: next }); scene.focusEvent(next); },
   });
-
-  const ticker = createTicker($("#ticker"), { events, stateNames: data.stateNames });
+  const ticker = createTicker($("#ticker"), { events, countyList });
 
   /* ---------- controls */
-  // 3D view mode + auto-orbit
-  const viewSelect = $("#view-mode");
-  viewSelect.innerHTML = Object.entries(VIEW_MODES).map(([key, m]) => `<option value="${key}">${m.label}</option>`).join("");
-  // a shareable start view, e.g. ?view=lights
+  const heightSelect = $("#height-metric"), colorSelect = $("#color-metric"), viewSelect = $("#view-mode");
+  fillMetricSelect(heightSelect, store.get().heightMetric);
+  fillMetricSelect(colorSelect, store.get().colorMetric);
+  heightSelect.addEventListener("change", () => store.set({ heightMetric: heightSelect.value }));
+  colorSelect.addEventListener("change", () => store.set({ colorMetric: colorSelect.value }));
+  $("#swap-metrics").addEventListener("click", () => { const s = store.get(); store.set({ heightMetric: s.colorMetric, colorMetric: s.heightMetric }); syncControls(); });
+
+  viewSelect.innerHTML = Object.entries(VIEW_MODES).map(([k, m]) => `<option value="${k}">${m.label}</option>`).join("");
   const requestedView = new URLSearchParams(location.search).get("view");
   viewSelect.value = VIEW_MODES[requestedView] ? requestedView : DEFAULT_VIEW_MODE;
   viewSelect.addEventListener("change", () => scene.setViewMode(viewSelect.value));
   scene.setViewMode(viewSelect.value);
-  const orbitButton = $("#orbit");
-  const setOrbit = (on) => { scene.setAutoRotate(on); orbitButton.classList.toggle("is-on", on); };
-  orbitButton.addEventListener("click", () => setOrbit(!orbitButton.classList.contains("is-on")));
-  scene.onAutoRotateStop(() => orbitButton.classList.remove("is-on"));
-  setOrbit(true);
 
-  // metric
-  const metricSelect = $("#metric");
-  metricSelect.innerHTML = Object.entries(METRICS).map(([key, m]) => `<option value="${key}">${m.label}</option>`).join("");
-  metricSelect.addEventListener("change", () => store.set({ metric: metricSelect.value }));
-
-  // peril toggles
   d3.select("#perils").selectAll("button").data(PERILS).join("button").attr("class", "chip is-on")
     .html((p) => `<span class="swatch" style="background:${p.color}"></span>${p.label}`)
-    .on("click", function (_, p) {
-      const perils = [...store.get().perils];
-      const i = PERILS.indexOf(p);
+    .on("click", (_, p) => {
+      const perils = [...store.get().perils], i = PERILS.indexOf(p);
       perils[i] = !perils[i];
-      if (!perils.some(Boolean)) return; // keep at least one peril on
-      d3.select(this).classed("is-on", perils[i]);
-      store.set({ perils });
+      if (!perils.some(Boolean)) return;
+      store.set({ perils }); syncControls();
     });
 
-  // year range + playback
-  const yearFromInput = $("#year-from"), yearToInput = $("#year-to");
-  for (const input of [yearFromInput, yearToInput]) { input.min = firstYear; input.max = lastYear; }
-  function syncYearInputs() {
-    const { yearFrom, yearTo } = store.get();
-    yearFromInput.value = yearFrom; yearToInput.value = yearTo;
-    $("#year-label").textContent = yearFrom === yearTo ? `${yearFrom}` : `${yearFrom}–${yearTo}`;
-  }
-  function onYearInput() {
-    let from = +yearFromInput.value, to = +yearToInput.value;
-    if (from > to) [from, to] = [to, from];
-    stopPlayback();
-    store.set({ yearFrom: from, yearTo: to });
-    syncYearInputs();
-  }
-  yearFromInput.addEventListener("input", onYearInput);
-  yearToInput.addEventListener("input", onYearInput);
+  const yearFrom = $("#year-from"), yearTo = $("#year-to");
+  for (const input of [yearFrom, yearTo]) { input.min = FIRST_YEAR; input.max = LAST_YEAR; }
+  const onYear = () => {
+    let a = +yearFrom.value, b = +yearTo.value;
+    if (a > b) [a, b] = [b, a];
+    stopPlayback(); store.set({ yearFrom: a, yearTo: b }); syncControls();
+  };
+  yearFrom.addEventListener("input", onYear); yearTo.addEventListener("input", onYear);
 
   let playTimer = null;
   const playButton = $("#play");
   function stopPlayback() { clearInterval(playTimer); playTimer = null; playButton.textContent = "▶ Play years"; }
   playButton.addEventListener("click", () => {
     if (playTimer) { stopPlayback(); return; }
-    let year = firstYear;
+    let year = FIRST_YEAR;
     playButton.textContent = "❚❚ Pause";
-    const step = () => {
-      store.set({ yearFrom: year, yearTo: year }); syncYearInputs();
-      year = year >= lastYear ? firstYear : year + 1;
-    };
-    step();
-    playTimer = setInterval(step, PLAYBACK_MS);
+    const step = () => { store.set({ yearFrom: year, yearTo: year }); syncControls(); year = year >= LAST_YEAR ? FIRST_YEAR : year + 1; };
+    step(); playTimer = setInterval(step, PLAYBACK_MS);
   });
 
-  $("#reset").addEventListener("click", () => {
+  const twiaToggle = $("#twia");
+  twiaToggle.addEventListener("change", () => store.set({ showTwia: twiaToggle.checked }));
+  const orbitButton = $("#orbit");
+  const setOrbit = (on) => { scene.setAutoRotate(on); orbitButton.classList.toggle("is-on", on); };
+  orbitButton.addEventListener("click", () => setOrbit(!orbitButton.classList.contains("is-on")));
+  scene.onAutoRotateStop(() => orbitButton.classList.remove("is-on"));
+
+  function syncControls() {
+    const s = store.get();
+    heightSelect.value = s.heightMetric; colorSelect.value = s.colorMetric;
+    yearFrom.value = s.yearFrom; yearTo.value = s.yearTo;
+    $("#year-label").textContent = s.yearFrom === s.yearTo ? `${s.yearFrom}` : `${s.yearFrom}–${s.yearTo}`;
+    d3.selectAll("#perils button").classed("is-on", (_, i) => s.perils[i]);
+    twiaToggle.checked = s.showTwia;
+  }
+  function resetAll() {
     stopPlayback();
-    d3.selectAll("#perils button").classed("is-on", true);
-    metricSelect.value = "events";
-    store.set({ metric: "events", perils: [true, true, true], yearFrom: firstYear, yearTo: lastYear, selection: { type: "all" }, focusEvent: null });
-    syncYearInputs();
-    scene.resetCamera();
+    store.set(initialState());
+    viewSelect.value = DEFAULT_VIEW_MODE; scene.setViewMode(DEFAULT_VIEW_MODE);
+    syncControls(); scene.resetCamera();
+  }
+  $("#reset").addEventListener("click", resetAll);
+  $("#clear-selection").addEventListener("click", () => { store.set({ selection: { type: "all" }, focusEvent: null }); scene.resetCamera(); });
+
+  /* ---------- story */
+  const story = createStory($("#story"), {
+    chapters: buildChapters(data),
+    apply(chapter) {
+      stopPlayback(); setOrbit(false);
+      store.set({ ...chapter.patch, focusEvent: null });
+      viewSelect.value = chapter.view; scene.setViewMode(chapter.view);
+      syncControls();
+      const sel = chapter.patch.selection;
+      scene.frameCounties(sel && sel.type === "set" ? sel.fips.map((f) => data.countyIndex.get(f)) : null);
+      return latest.values;
+    },
   });
-  $("#clear-selection").addEventListener("click", () => store.set({ selection: { type: "all" }, focusEvent: null }));
+  $("#story-open").addEventListener("click", () => story.open());
 
   /* ---------- one update path for every view */
-  function selectionTitle(state) {
-    if (state.selection.type === "state") return data.stateNames.get(state.selection.fips);
-    if (state.selection.type === "hex") return `Map cell in ${data.stateNames.get(binState[state.selection.id]) || "—"}`;
-    return "United States";
+  function selectionLabel(sel) {
+    if (sel.type === "county") return `${countyList[data.countyIndex.get(sel.fips)].name} County`;
+    if (sel.type === "set") return `${sel.fips.length} counties`;
+    return "All of Texas";
   }
-
   function render(state) {
-    latest = aggregate(events, bins, state, { eventTableRows: PANELS.eventTableRows, highlightCount: PANELS.tickerEvents, visibility });
-    scene.setValues(latest.hexValues, latest.hexMax);
+    latest = aggregate(data, state, { eventTableRows: PANELS.eventTableRows, highlightCount: PANELS.tickerEvents, visibility });
+    const { values, selection: sel } = latest;
+    const heightScale = makeHeightScale(values, state.heightMetric);
+    colorScale = makeColorScale(values, state.colorMetric);
+    colors = values.map((v) => colorScale.color(v[state.colorMetric]));
+    const heights = values.map((v) => { const x = v[state.heightMetric]; return x == null || !Number.isFinite(x) ? 0.6 : heightScale(x); });
+    scene.setPrisms(heights, colors);
     scene.setVisibility(visibility);
     scene.setHighlights(latest.highlights);
-    ticker.update(latest.highlights);
-    scene.highlightHex(state.selection.type === "hex" ? state.selection.id : null);
-    if (state.selection.type === "state") scene.setFocusBins((bin) => binState[bin] === state.selection.fips);
-    else if (state.selection.type === "hex") scene.setFocusBins((bin) => bin === state.selection.id);
-    else scene.setFocusBins(null);
-    scene.highlightState(state.selection.type === "state" ? state.selection.fips : null);
-    const focus = state.focusEvent;
-    scene.showBeacon(focus != null && events.columns.onMap[focus] ? { x: events.columns.x[focus], y: events.columns.y[focus] } : null);
+    scene.setTwia(state.showTwia);
 
-    $("#selection-title").textContent = selectionTitle(state);
+    const selectedSet = state.selection.type === "all" ? null : new Set(sel.counties.map((c) => c.fips));
+    scene.setFocus(selectedSet ? (i) => inSelection(state.selection, countyList[i].fips) : null);
+    scene.highlightCounties(selectedSet && selectedSet.size <= 40 ? sel.counties.map((c) => c.index) : []);
+
+    const colorOf = (i) => colors[i];
+    $("#selection-title").textContent = selectionLabel(state.selection);
     $("#clear-selection").hidden = state.selection.type === "all";
-    $("#metric-note").textContent = `Column height = ${METRICS[state.metric].label} (square-root scale). Segments = peril share, largest on top, so the cap colour is the dominant peril.`;
-    kpis.update(latest.selection);
-    ranking.update(latest.stateValues, state);
-    composition.update(latest.selection);
-    timeline.update(latest.selection, state);
-    eventTable.update(latest.selection, state);
+    legend.update(state.heightMetric, state.colorMetric, colorScale);
+    kpis.update(sel);
+    ranking.update({ values, metric: state.heightMetric, colorOf, selectedSet });
+    profile.update(selectionLabel(state.selection), selectionProfile(sel, state, values, countyList), values, sel.counties.length === 1);
+    scatter.update({ countyList, values, xMetric: state.heightMetric, yMetric: state.colorMetric, colorOf, selectedSet });
+    composition.update(sel);
+    timeline.update(sel, state);
+    reasons.update(sel);
+    eventTable.update(sel, state);
+    ticker.update(latest.highlights);
   }
   store.subscribe(render);
-  syncYearInputs();
+  syncControls();
   render(store.get());
-
-  $("#event-count").textContent = formatCount(events.count);
+  const params = new URLSearchParams(location.search);
+  setOrbit(!params.has("still") && !params.has("story"));
+  if (params.has("story")) story.open(Math.max(0, (+params.get("story") || 1) - 1)); // shareable chapter link
   document.body.classList.remove("is-loading");
 }
 
 start().catch((error) => {
   console.error(error);
-  $("#loading").textContent = "Could not load the storm data. Please refresh.";
+  $("#loading").textContent = "Could not load the Texas data. Please refresh.";
 });

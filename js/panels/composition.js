@@ -14,7 +14,7 @@ export function createComposition(container) {
   const width = 300, barHeight = 16;
   const svg = root.append("svg").attr("viewBox", `0 0 ${width} 92`).attr("class", "composition");
   const rows = [
-    { key: "eventsByPeril", label: "Share of events", y: 14 },
+    { key: "byPeril", label: "Share of storm reports", y: 14 },
     { key: "damageByPeril", label: "Share of NOAA damage", y: 58 },
   ];
   const rowGroups = svg.selectAll("g.comp-row").data(rows).join("g").attr("class", "comp-row")
@@ -46,7 +46,7 @@ export function createComposition(container) {
 
     legend.selectAll("div").data(PERILS).join("div").attr("class", "comp-legend__item")
       .html((peril, i) => `<span class="swatch" style="background:${peril.color}"></span>${peril.label}
-        <b>${formatCount(selected.eventsByPeril[i])}</b> events · <b>${formatMoney(selected.damageByPeril[i])}</b>`);
+        <b>${formatCount(selected.byPeril[i])}</b> reports · <b>${formatMoney(selected.damageByPeril[i])}</b>`);
   }
   return { update };
 }

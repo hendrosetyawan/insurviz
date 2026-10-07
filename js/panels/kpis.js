@@ -1,42 +1,40 @@
 /**
  * kpis.js
  * ---------------------------------------------------------------------------
- * Header tiles summarising the current selection, including how much of the
- * evidence is measured (wind gusts) and how often damage is reported at all.
+ * Header tiles for the current selection, one or two per lens, counting up
+ * to their new values on every change.
  */
 
-import { formatCount, formatMoney, formatPercent } from "../format.js";
+import { LENSES } from "../config.js";
+import { formatCount, formatMoney } from "../format.js";
+
+const TILES = [
+  { key: "reports", lens: "hazard", label: "Storm reports", format: formatCount },
+  { key: "significant", lens: "hazard", label: "Significant reports", format: formatCount },
+  { key: "ownerUnits", lens: "exposure", label: "Owner-occupied homes", format: formatCount },
+  { key: "pif", lens: "market", label: "HO policies in force", format: formatCount },
+  { key: "coverage", lens: "market", label: "Policies per owner home", format: (v) => d3.format(".2f")(v) },
+  { key: "nonrenewal", lens: "market", label: "Nonrenewals / 1k HO", format: (v) => d3.format(".1f")(v) },
+];
 
 export function createKpis(container) {
-  const tiles = [
-    { key: "events", label: "Events" },
-    { key: "significant", label: "Significant events" },
-    { key: "damage", label: "NOAA-reported damage" },
-    { key: "reported", label: "Damage field filled" },
-    { key: "measured", label: "Wind gusts measured" },
-  ];
-  const tileSelection = d3.select(container).selectAll(".kpi").data(tiles).join("div").attr("class", "kpi");
-  tileSelection.append("div").attr("class", "kpi__value");
-  tileSelection.append("div").attr("class", "kpi__label").text((tile) => tile.label);
+  const tiles = d3.select(container).selectAll(".kpi").data(TILES).join("div").attr("class", "kpi")
+    .style("--lens", (t) => LENSES[t.lens].color);
+  tiles.append("div").attr("class", "kpi__value");
+  tiles.append("div").attr("class", "kpi__label").text((t) => t.label);
 
-  /** Update the tiles from the aggregated selection, counting up to the new values. */
   function update(selected) {
     const values = {
-      events: [selected.eventCount, formatCount],
-      significant: [selected.significant, formatCount],
-      damage: [selected.damageTotal, formatMoney],
-      reported: [selected.eventCount ? selected.damageReported / selected.eventCount : NaN, formatPercent],
-      measured: [selected.windEvents ? selected.windMeasured / selected.windEvents : NaN, formatPercent],
+      reports: selected.eventCount, significant: selected.significant, ownerUnits: selected.ownerUnits,
+      pif: selected.pifHomeowners, coverage: selected.coverageRatio, nonrenewal: selected.nonrenewalRate,
     };
-    tileSelection.select(".kpi__value").transition().duration(650).ease(d3.easeCubicOut)
-      .tween("text", function (tile) {
-        const [target, format] = values[tile.key];
-        if (Number.isNaN(target)) { this.textContent = "—"; return () => {}; }
-        const start = this.__value ?? 0;
-        const interpolate = d3.interpolateNumber(start, target);
-        this.__value = target;
-        return (t) => { this.textContent = format(interpolate(t)); };
-      });
+    tiles.select(".kpi__value").transition().duration(650).ease(d3.easeCubicOut).tween("text", function (tile) {
+      const target = values[tile.key];
+      if (target == null || !Number.isFinite(target)) { this.textContent = "—"; return () => {}; }
+      const interpolate = d3.interpolateNumber(this.__value ?? 0, target);
+      this.__value = target;
+      return (t) => { this.textContent = tile.format(interpolate(t)); };
+    });
   }
-  return { update };
+  return { update, formatMoney };
 }

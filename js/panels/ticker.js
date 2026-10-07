@@ -7,16 +7,15 @@
 
 import { formatMoney, perilColor, perilLabel } from "../format.js";
 
-export function createTicker(container, { events, stateNames }) {
+export function createTicker(container, { events, countyList }) {
   const track = d3.select(container).append("div").attr("class", "ticker__track");
-  const { peril, year, month, county } = events.columns;
-  const firstYear = events.meta.firstYear;
+  const { peril, year, month, countyIdx } = events.columns;
 
   function update(highlights) {
     const items = highlights.map(({ index, damage }) => ({
       key: index,
       peril: peril[index],
-      label: `${stateNames.get(Math.floor(county[index] / 1000)) || ""} ${firstYear + year[index]}-${String(month[index]).padStart(2, "0")}`,
+      label: `${countyIdx[index] >= 0 ? countyList[countyIdx[index]].name + " Co." : "Texas"} ${year[index]}-${String(month[index]).padStart(2, "0")}`,
       damage,
     }));
     // the list is drawn twice so the CSS scroll loops without a gap

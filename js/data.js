@@ -1,72 +1,50 @@
 /**
  * data.js
  * ---------------------------------------------------------------------------
- * Loads the packed NOAA Storm Events file and the map/lookup files, then
- * projects every event onto the map once. Nothing here draws.
+ * Loads the Texas files, builds the Texas projection, and projects every
+ * county outline and storm report onto the same map once. Nothing here draws.
  */
 
-import { DATA, MAP } from "./config.js";
+import { DATA, MAP, TEXAS_FIPS, TWIA_COUNTIES } from "./config.js";
 
-const TYPED_ARRAYS = {
-  float32: Float32Array, int32: Int32Array, int16: Int16Array,
-  uint16: Uint16Array, uint8: Uint8Array,
-};
-
-/** Read events.bin using the column layout stored in events.json. */
-async function loadEvents() {
-  const [meta, buffer] = await Promise.all([
-    d3.json(DATA.eventsMeta),
-    fetch(DATA.eventsBinary).then((response) => response.arrayBuffer()),
-  ]);
-  const columns = {};
-  for (const column of meta.columns) {
-    columns[column.name] = new TYPED_ARRAYS[column.type](buffer, column.offset, meta.count);
-  }
-  return { meta, columns, count: meta.count };
+/** Texas-centric equal-area projection (EPSG:3083 parallels), fitted to the map frame. */
+function texasProjection(texasFeature) {
+  return d3.geoConicEqualArea().parallels([27.5, 35]).rotate([100, 0]).center([0, 31.25])
+    .fitSize([MAP.width, MAP.height], texasFeature);
 }
 
-/** Project every event's lon/lat to map pixels (same projection as us-atlas). */
-function projectEvents(events) {
-  const projection = d3.geoAlbersUsa().scale(MAP.projectionScale).translate(MAP.projectionTranslate);
-  const x = new Float32Array(events.count);
-  const y = new Float32Array(events.count);
-  const onMap = new Uint8Array(events.count);
-  const { lon, lat } = events.columns;
-  for (let i = 0; i < events.count; i++) {
-    const point = projection([lon[i] / 100, lat[i] / 100]);
-    if (point) { x[i] = point[0]; y[i] = point[1]; onMap[i] = 1; }
-  }
-  Object.assign(events.columns, { x, y, onMap });
-}
-
-/** Population per state (sum of counties), used for "per 100k residents" rates. */
-function populationByState(rows) {
-  const totals = new Map();
-  for (const row of rows) {
-    const stateFips = Math.floor(+row["FIPS Code"] / 1000);
-    totals.set(stateFips, (totals.get(stateFips) || 0) + +row.Population);
-  }
-  return totals;
-}
-
-/**
- * Load everything the app needs.
- * @returns {Promise<{events, details, states, counties, stateNames, countyNames, statePopulation}>}
- */
 export async function loadAll() {
-  const [events, details, states, counties, populationRows] = await Promise.all([
-    loadEvents(),
-    d3.json(DATA.eventDetails),
-    d3.json(DATA.states),
-    d3.json(DATA.counties),
-    d3.csv(DATA.population),
+  const [events, counties, complaints, meta, geometry] = await Promise.all([
+    d3.json(DATA.events), d3.json(DATA.counties), d3.json(DATA.complaints), d3.json(DATA.meta), d3.json(DATA.geometry),
   ]);
-  projectEvents(events);
 
-  const stateNames = new Map(states.objects.states.geometries.map((g) => [+g.id, g.properties.name]));
-  const countyNames = new Map(counties.objects.counties.geometries.map((g) => [+g.id, g.properties.name]));
-  return {
-    events, details, states, counties, stateNames, countyNames,
-    statePopulation: populationByState(populationRows),
-  };
+  // Texas outline + the 254 county shapes
+  const texas = topojson.feature(geometry, geometry.objects.states.geometries.find((g) => +g.id === TEXAS_FIPS));
+  const countyGeoms = geometry.objects.counties.geometries.filter((g) => Math.floor(+g.id / 1000) === TEXAS_FIPS);
+  const countyFeatures = countyGeoms.map((g) => topojson.feature(geometry, g));
+  const projection = texasProjection(texas);
+  const countyBorders = topojson.mesh(geometry, { type: "GeometryCollection", geometries: countyGeoms }, (a, b) => a !== b);
+
+  // county records in a stable order (index = position in arrays used by the views)
+  const countyList = countyFeatures.map((feature, index) => {
+    const fips = +feature.id;
+    const record = counties[fips] || { name: feature.properties.name, reasons: {} };
+    const centroid = projection(d3.geoCentroid(feature));
+    return { index, fips, name: record.name || feature.properties.name, feature, centroid, data: record };
+  });
+  const countyIndex = new Map(countyList.map((c) => [c.fips, c.index]));
+  const twia = new Set(TWIA_COUNTIES.map((name) => countyList.find((c) => c.name === name)?.fips).filter(Boolean));
+
+  // project storm reports once; keep the county index for fast aggregation
+  const columns = events.columns;
+  const count = events.count;
+  const x = new Float32Array(count), y = new Float32Array(count), county = new Int16Array(count);
+  for (let i = 0; i < count; i++) {
+    const point = projection([columns.lon[i], columns.lat[i]]) || [NaN, NaN];
+    x[i] = point[0]; y[i] = point[1];
+    county[i] = countyIndex.has(columns.county[i]) ? countyIndex.get(columns.county[i]) : -1;
+  }
+  Object.assign(columns, { x, y, countyIdx: county });
+
+  return { events, countyList, countyIndex, twia, texas, countyBorders, projection, complaints, meta };
 }

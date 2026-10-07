@@ -3,36 +3,34 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>InsurViz · Storm Damage Risk Analytics</title>
-  <meta name="description" content="3D visual analytics of NOAA hail, thunderstorm-wind and tornado history for property-insurance risk analysis." />
+  <title>InsurViz Texas · Storms, Homes and the Homeowners Insurance Market</title>
+  <meta name="description" content="3D visual analytics linking NOAA storm history, Census ACS housing exposure and Texas Department of Insurance market data for all 254 Texas counties." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
   <script type="importmap">
-    {
-      "imports": {
+    { "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
-      }
-    }
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/" } }
   </script>
 </head>
 <body class="is-loading">
   <div id="splash" class="splash">
     <div class="splash__mark">◈</div>
     <div class="splash__name">INSURVIZ</div>
-    <div class="splash__sub">Storm damage risk analytics · NOAA Storm Events 2015–2025</div>
+    <div class="splash__sub">Texas · storms × homes × the homeowners insurance market</div>
     <div class="splash__bar"><i></i></div>
-    <div id="loading" class="splash__status">Loading 308,762 hail, wind and tornado events…</div>
+    <div id="loading" class="splash__status">Joining NOAA, Census ACS and Texas Department of Insurance data for 254 counties…</div>
   </div>
+
   <header class="topbar">
     <div class="brand">
       <span class="brand__mark">◈</span>
       <div>
-        <div class="brand__name">INSURVIZ</div>
-        <div class="brand__sub">Storm damage risk analytics for property insurance · Team 8</div>
+        <div class="brand__name">INSURVIZ <span class="brand__tx">TEXAS</span></div>
+        <div class="brand__sub">Where severe storms meet the homeowners insurance market · Team 8</div>
       </div>
     </div>
     <div id="kpis" class="kpis"></div>
@@ -40,11 +38,16 @@
 
   <section class="controls">
     <div class="control">
-      <label for="metric">Column height</label>
-      <select id="metric"></select>
+      <label for="height-metric">Prism height</label>
+      <select id="height-metric"></select>
+    </div>
+    <button id="swap-metrics" class="button button--icon" title="Swap height and colour">⇄</button>
+    <div class="control">
+      <label for="color-metric">Prism colour</label>
+      <select id="color-metric"></select>
     </div>
     <div class="control">
-      <span class="control__label">Perils</span>
+      <span class="control__label">Perils (NOAA)</span>
       <div id="perils" class="chips"></div>
     </div>
     <div class="control">
@@ -61,59 +64,80 @@
       <label for="view-mode">3D view</label>
       <select id="view-mode"></select>
     </div>
-    <button id="orbit" class="button">⟳ Auto-orbit</button>
-    <button id="reset" class="button button--ghost">Reset view</button>
+    <label class="toggle"><input id="twia" type="checkbox" /> TWIA coast</label>
+    <button id="orbit" class="button">⟳ Orbit</button>
+    <button id="story-open" class="button button--accent">▶ Guided story</button>
+    <button id="reset" class="button button--ghost">Reset</button>
   </section>
 
   <main class="layout">
     <aside class="column column--left">
       <section class="panel" id="panel-r1">
         <h2 class="panel__title"><span class="req">R1</span> Geographic comparison</h2>
-        <p class="panel__sub">States ranked by the chosen metric. Click a state to select it.</p>
+        <p class="panel__sub">Counties ranked by prism height (riskiest first), bars coloured like the map.</p>
+        <div class="panel__body"></div>
+      </section>
+      <section class="panel" id="panel-reasons">
+        <h2 class="panel__title"><span class="req req--market">TDI</span> Why insurers say no</h2>
         <div class="panel__body"></div>
       </section>
       <section class="panel panel--note">
-        <h2 class="panel__title">How to read the map</h2>
-        <p id="metric-note"></p>
-        <p>Each glowing point is one NOAA report (bigger = significant or damaging). Pillars with pulsing rings mark the most damaging events in the filters.</p>
-        <p>Drag to orbit · scroll to zoom · right-drag to pan. Hover a column for values; click it to select that map cell.</p>
-        <p class="caution">NOAA damage values are estimates entered by the National Weather Service, not insured losses. Many are blank or rough.</p>
+        <h2 class="panel__title">Read with care</h2>
+        <p>Three lenses, three periods: NOAA 2015–2025, ACS 2020–2024, TDI policies 2026 Q1 and HB 2067 actions Apr–Jun 2026.</p>
+        <p class="caution">NOAA damage is a National Weather Service estimate, not insured loss. TDI nonrenewal counts are new and cover three months. Policies per owner home is a proxy and can exceed 1.</p>
+        <p>NOAA layers here are hail, thunderstorm wind and tornado only. Hurricanes and floods are not shown.</p>
       </section>
     </aside>
 
-    <section class="stage">
-      <div class="stage__label">
-        <span>Selection</span>
-        <b id="selection-title"></b>
-        <button id="clear-selection" class="button button--small" hidden>Clear</button>
+    <section class="center">
+      <div class="stage">
+        <div class="stage__label">
+          <span>Selection</span>
+          <b id="selection-title"></b>
+          <button id="clear-selection" class="button button--small" hidden>Clear</button>
+        </div>
+        <div id="legend" class="legend"></div>
+        <div id="scene" class="scene"></div>
+        <div id="story" class="story" hidden>
+          <div class="story__top"><span class="story__step"></span><button class="story__close" aria-label="Close story">✕</button></div>
+          <h3 class="story__title"></h3>
+          <p class="story__text"></p>
+          <div class="story__nav"><button class="button story__prev">← Back</button><button class="button button--accent story__next">Next →</button></div>
+        </div>
       </div>
-      <div id="scene" class="scene"></div>
+      <section class="panel" id="panel-r3">
+        <h2 class="panel__title"><span class="req">R3</span> Temporal change <em class="panel__hint">click a year to focus · peril clock = month of year</em></h2>
+        <div class="panel__body"></div>
+      </section>
     </section>
 
     <aside class="column column--right">
+      <section class="panel" id="panel-profile">
+        <h2 class="panel__title">Three-lens profile</h2>
+        <p class="panel__sub">Bars = percentile among 254 counties (longer = riskier). Click a row to colour the map by it.</p>
+        <div class="panel__body"></div>
+      </section>
+      <section class="panel" id="panel-scatter">
+        <h2 class="panel__title">Height vs. colour, every county</h2>
+        <div class="panel__body"></div>
+      </section>
       <section class="panel" id="panel-r2">
         <h2 class="panel__title"><span class="req">R2</span> Peril composition</h2>
         <div class="panel__body"></div>
       </section>
-      <section class="panel" id="panel-r3">
-        <h2 class="panel__title"><span class="req">R3</span> Temporal change</h2>
-        <p class="panel__sub">Click a year to focus on it.</p>
-        <div class="panel__body"></div>
-      </section>
-      <section class="panel panel--grow" id="panel-r4">
+      <section class="panel" id="panel-r4">
         <h2 class="panel__title"><span class="req">R4</span> Event investigation</h2>
-        <p class="panel__sub">Most damaging events in the selection. Click one to light it on the map.</p>
+        <p class="panel__sub">Most damaging reports in the selection. Click one to fly to it.</p>
         <div class="panel__body"></div>
       </section>
     </aside>
   </main>
 
-  <div id="ticker" class="ticker" aria-label="Most damaging events in the current filters"></div>
+  <div id="ticker" class="ticker" aria-label="Most damaging storm reports in the current filters"></div>
   <footer class="footer">
-    <span>Data: NOAA NCEI Storm Events Database, hail + thunderstorm wind + tornado, 2015–2025 (<span id="event-count">…</span> events).</span>
+    <span>Data: NOAA NCEI Storm Events · U.S. Census Bureau ACS 5-year 2024 · Texas Department of Insurance (data.texas.gov).</span>
     <span>Aadi Mahajan · Abhinav Sheshadri · Hendro Setyawan · MD Imtiaz Mahi</span>
   </footer>
-
   <div id="tooltip" class="tooltip" hidden></div>
   <script type="module" src="js/main.js"></script>
 </body>
