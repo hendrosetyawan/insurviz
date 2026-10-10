@@ -11,6 +11,34 @@ that are usually looked at separately:
 
 **Live:** https://insurviz.web.app · guided story: https://insurviz.web.app/?story=1
 
+**Project proposal (v2, Oct 2026):** https://insurviz.web.app/proposal/ · [report (PDF)](proposal/Team8_Proposal_v2.pdf) · [slides (PDF)](proposal/Team8_Proposal_Slides_v6.pdf)
+
+## Project proposal v2: recurring vs. catastrophic storm damage
+
+This app is the preliminary mock-up for the Team 8 proposal *Storm Damage Risk Analytics*.
+
+**Problem statement.** Insurance underwriters and risk analysts need to understand why historical severe-weather losses differ across geographic regions. Total reported damage and storm frequency can be misleading because they do not distinguish persistent weather exposure from isolated catastrophic events.
+
+**Goal.** An interactive visualization that helps analysts compare counties, identify the hazards responsible for historical damage, and distinguish recurring storm impacts from rare extreme events.
+
+Preliminary findings come from NOAA Storm Events, Texas, hail + thunderstorm wind + tornado, 2015–2025, with damage grouped by county storm day:
+
+* Tarrant ($1.44B) and Bexar ($1.37B) have almost the same reported damage. Tarrant's came from three storms over $350M in two different years; 99% of Bexar's came from one hailstorm on 12 April 2016.
+* In 48 of the 57 counties with at least $5M of damage, one storm day caused at least half of it.
+* Tornadoes were 6% of reports but 23% of damage; thunderstorm wind was 40% of reports but 4% of damage.
+* 15% of reports leave damage blank and 64% report $0. NOAA damage is an estimate, not insured loss.
+
+| Req. | Requirement | Analyst question | Gap in today's tools (Xactimate, 360Value, RMS Risk Modeler) |
+|---|---|---|---|
+| R1 | Geographic loss comparison | Why does County A have higher storm damage than County B? | Property-level tools cannot compare counties' storm history |
+| R2 | Recurring vs. catastrophic loss | Regular damaging storms, or a few extreme events? | Modeled averages hide recurrence vs. tail events |
+| R3 | Hazard contribution | Mainly hail, tornado or thunderstorm wind? | Claims are attributed one by one |
+| R4 | Temporal loss pattern (5/10/20 years) | Repeated over the decade, or concentrated in one or two years? | Simulated event sets do not show real years |
+| R5 | Storm event investigation | Which storms explain the high damage? | Model results are hard to trace to real storms |
+| R6 | Data context and interpretation | Can I trust this comparison, and what are its limits? | Repair cost, rebuild cost, modeled loss, reported damage and paid claims are easy to confuse |
+
+The tool challenges come from public vendor documentation and will be checked in user interviews (planned; no findings yet). The mock-up below predates R1–R6 and will be revised toward them.
+
 ## Positioning
 
 Texas logs more hail, thunderstorm-wind and tornado reports than any other

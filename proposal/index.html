@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Storm Damage Risk Analytics · Proposal</title>
+  <meta name="description" content="Team 8 (CSCE 679) proposal: visual analytics of recurring and catastrophic severe-weather damage across Texas counties for insurance analysts." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #05080d; --panel: #0a121a; --line: #16323a; --line-strong: #23535c;
+      --ink: #e6f1f3; --muted: #8fa6ae; --accent: #2dd4bf; --warm: #f5a524;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 Inter, system-ui, sans-serif; }
+    a { color: var(--accent); }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px 64px; }
+    header.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: rgba(5, 8, 13, 0.94); z-index: 2; }
+    .brand { font-family: var(--mono); letter-spacing: 0.2em; font-weight: 600; font-size: 14px; }
+    .brand span { color: var(--accent); }
+    .top a.btn { text-decoration: none; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 12px; color: var(--ink); font-size: 13px; white-space: nowrap; }
+    .top a.btn:hover { border-color: var(--accent); }
+    .hero { padding: 40px 0 8px; }
+    .eyebrow { font-family: var(--mono); color: var(--accent); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
+    h1 { font-size: clamp(26px, 4vw, 38px); line-height: 1.2; margin: 8px 0 12px; }
+    h2 { font-size: 22px; margin: 44px 0 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+    h3 { font-size: 16px; margin: 0 0 4px; }
+    .lead { color: var(--muted); font-size: 17px; max-width: 760px; }
+    .team { font-size: 14px; color: var(--ink); margin-top: 6px; }
+    .downloads { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0; }
+    .downloads a { text-decoration: none; background: var(--accent); color: #031412; font-weight: 600; border-radius: 6px; padding: 8px 14px; font-size: 14px; }
+    .downloads a.alt { background: transparent; color: var(--ink); border: 1px solid var(--line-strong); }
+    .statement { border-left: 3px solid var(--accent); background: var(--panel); padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 14px 0; }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+    figure { margin: 0; }
+    .fig { background: #fff; border-radius: 8px; padding: 10px; }
+    .fig img { width: 100%; height: auto; display: block; }
+    figcaption { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 18px 0; }
+    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+    .stat b { display: block; font-family: var(--mono); font-size: 22px; color: var(--accent); }
+    .stat span { color: var(--muted); font-size: 13px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+    .card .req { font-family: var(--mono); color: #031412; background: var(--accent); border-radius: 4px; padding: 0 6px; font-size: 12px; margin-right: 6px; }
+    .card .q { color: var(--muted); font-style: italic; margin: 6px 0 0; font-size: 14px; }
+    .card .fig { margin-bottom: 10px; padding: 6px; }
+    .card ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink); font-size: 14px; }
+    .tool .vendor { color: var(--warm); font-size: 12px; font-family: var(--mono); }
+    .tool .leads { margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--accent); }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 560px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .note { color: var(--muted); font-size: 13px; }
+    .caution { border: 1px solid var(--line-strong); border-radius: 8px; padding: 12px 14px; color: var(--muted); font-size: 14px; }
+    .caution b { color: var(--warm); }
+    footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">INSURVIZ <span>· PROPOSAL</span></div>
+    <a class="btn" href="../">Open the interactive mock-up →</a>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">CSCE 679 Data Visualization · Team 8 · Proposal v2, October 2026</div>
+      <h1>Storm Damage Risk Analytics: recurring and catastrophic severe-weather damage across Texas counties</h1>
+      <p class="lead">An interactive visualization that helps insurance analysts compare counties, identify the hazards responsible for historical damage, and distinguish recurring storm impacts from rare extreme events.</p>
+      <p class="team">Aadi Mahajan · Abhinav Sheshadri · Hendro Setyawan · MD Imtiaz Mahi</p>
+      <div class="downloads">
+        <a href="Team8_Proposal_v2.pdf">Proposal report (PDF)</a>
+        <a class="alt" href="Team8_Proposal_Slides_v6.pdf">Slides (PDF)</a>
+        <a class="alt" href="https://github.com/hendrosetyawan/insurviz">Code on GitHub</a>
+      </div>
+    </section>
+
+    <h2>Problem statement</h2>
+    <div class="statement">Insurance underwriters and risk analysts need to understand why historical severe-weather losses differ across geographic regions. Total reported damage and storm frequency can be misleading because they do not distinguish persistent weather exposure from isolated catastrophic events.</div>
+    <p>Our preliminary analysis of NOAA Storm Events (25,867 Texas hail, thunderstorm-wind and tornado reports, 2015–2025) shows how strong the effect is. Damage is grouped by <em>storm day</em> (all reports in a county on one date), because NOAA often splits one storm into many reports.</p>
+    <div class="stats">
+      <div class="stat"><b>$1.44B vs $1.37B</b><span>Tarrant vs Bexar reported damage. Tarrant: three storms over $350M in two years. Bexar: 99% from one hailstorm (12 Apr 2016).</span></div>
+      <div class="stat"><b>48 of 57</b><span>counties with ≥ $5M damage where one storm day caused at least half of it.</span></div>
+      <div class="stat"><b>6% → 23%</b><span>Tornadoes: 6% of reports but 23% of damage. Thunderstorm wind: 40% of reports, 4% of damage.</span></div>
+      <div class="stat"><b>4 in 5</b><span>reports leave damage blank (15%) or report $0 (64%). Reported damage is not insured loss.</span></div>
+    </div>
+    <div class="grid2">
+      <figure><div class="fig"><img src="fig/tarrant_bexar.png" alt="Damage per storm day for Tarrant and Bexar counties, 2015 to 2025, on a log scale" loading="lazy" /></div>
+        <figcaption>Same total, different history: NOAA-reported damage per storm day (log scale).</figcaption></figure>
+      <figure><div class="fig"><img src="fig/concentration.png" alt="Share of each county's damage from its worst storm day, 57 counties sorted" loading="lazy" /></div>
+        <figcaption>Most counties look like Bexar: one storm day dominates their damage total.</figcaption></figure>
+      <figure><div class="fig"><img src="fig/hazard_shares.png" alt="Share of events versus share of damage for hail, thunderstorm wind and tornado" loading="lazy" /></div>
+        <figcaption>The most frequent hazard is not the most damaging one.</figcaption></figure>
+      <figure><div class="fig"><img src="fig/title_map.png" alt="Texas map: share of each county's damage from its single worst storm day" loading="lazy" /></div>
+        <figcaption>Where damage comes from repeated storms (blue) or one storm (dark red).</figcaption></figure>
+    </div>
+
+    <h2>Target users</h2>
+    <div class="grid2">
+      <div class="card"><h3>Insurance analysts (primary)</h3>
+        <ul><li><b>Underwriting analysts:</b> the storm history behind a location, and whether the record can be trusted.</li>
+          <li><b>Catastrophe-risk analysts:</b> is a county’s damage recurring, or driven by a few extreme events?</li>
+          <li><b>Portfolio-risk analysts:</b> why County A has more damage than County B under the same filters.</li></ul></div>
+      <div class="card"><h3>Homeowners and communities (secondary)</h3>
+        <ul><li>Does my county see damaging storms every year, or was one storm the outlier?</li>
+          <li>Does recurring local hail justify an impact-resistant roof? TDI encourages insurers to discount such mitigation.</li></ul></div>
+    </div>
+
+    <h2>What today’s insurance tools leave out</h2>
+    <p>Insurers rely on powerful commercial tools, but each answers a different question. Based on their public documentation, none of them shows the observed storm record behind a county’s losses. We will check these challenges in our interviews.</p>
+    <div class="grid3">
+      <div class="card tool"><h3>Xactimate</h3><div class="vendor">Verisk · claims estimating</div>
+        <p class="q">What will it cost to repair this damaged home?</p>
+        <ul><li>One claim at a time, after the loss</li><li>No view of how often, or by which hazard, a county is hit</li><li>Cannot compare counties’ storm history</li></ul>
+        <div class="leads">→ R1 · R3 · R5</div></div>
+      <div class="card tool"><h3>360Value</h3><div class="vendor">Verisk · replacement cost</div>
+        <p class="q">What would this home cost to rebuild?</p>
+        <ul><li>Values the building, not the hazard</li><li>Storm history must come from elsewhere</li><li>Raw damage totals ignore how built-up a county is</li></ul>
+        <div class="leads">→ R1 · R6</div></div>
+      <div class="card tool"><h3>Risk Modeler</h3><div class="vendor">Moody’s RMS · catastrophe modeling</div>
+        <p class="q">What losses could a portfolio face?</p>
+        <ul><li>Modeled averages hide whether losses recur or come from the tail</li><li>Hard to trace results back to real storms and years</li><li>Specialist, licensed tool; vendor models can differ</li></ul>
+        <div class="leads">→ R2 · R4 · R5 · R6</div></div>
+    </div>
+    <p class="note">Our system complements these tools; it does not price repairs or model risk.</p>
+
+    <h2>Design requirements</h2>
+    <div class="grid3">
+      <div class="card"><div class="fig"><img src="fig/thumb_r1.png" alt="" loading="lazy" /></div><h3><span class="req">R1</span>Geographic loss comparison</h3>
+        <p>Compare storm frequency, total damage and damage per event for two or more counties under the same period and hazard filters.</p><p class="q">Why does County A have higher storm damage than County B?</p></div>
+      <div class="card"><div class="fig"><img src="fig/thumb_r2.png" alt="" loading="lazy" /></div><h3><span class="req">R2</span>Recurring vs. catastrophic loss</h3>
+        <p>Mean vs. median damage per event, the largest events, and the share of damage from the top 1 or 5 events.</p><p class="q">Regular damaging storms, or a few extreme events?</p></div>
+      <div class="card"><div class="fig"><img src="fig/thumb_r3.png" alt="" loading="lazy" /></div><h3><span class="req">R3</span>Hazard contribution</h3>
+        <p>Each hazard’s share of events and of damage; most frequent vs. most damaging hazard.</p><p class="q">Is the damage mainly hail, tornado or thunderstorm wind?</p></div>
+      <div class="card"><div class="fig"><img src="fig/thumb_r4.png" alt="" loading="lazy" /></div><h3><span class="req">R4</span>Temporal loss pattern</h3>
+        <p>5-, 10- and 20-year windows, annual frequency and damage, unusually high years.</p><p class="q">Repeated damaging storms, or losses concentrated in one or two years?</p></div>
+      <div class="card"><div class="fig"><img src="fig/thumb_r5.png" alt="" loading="lazy" /></div><h3><span class="req">R5</span>Storm event investigation</h3>
+        <p>A county’s most damaging events with date, location, hazard, magnitude and damage, linked to totals and trends.</p><p class="q">Which storm events explain this county’s high damage?</p></div>
+      <div class="card"><div class="fig"><img src="fig/thumb_r6.png" alt="" loading="lazy" /></div><h3><span class="req">R6</span>Data context and interpretation</h3>
+        <p>Separate NOAA estimates from insured claims, flag missing data, add development context, and never show history as a risk score or premium advice.</p><p class="q">Can I trust this comparison, and what are its limits?</p></div>
+    </div>
+
+    <h2>Data</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Dataset</th><th>Unit · years</th><th>Key fields</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>NOAA NCEI Storm Events</td><td>Event → county · 2006–2025</td><td>Hail, thunderstorm wind, tornado; date, location, magnitude, damage estimate, narrative</td><td>Storm history (R1–R5)</td></tr>
+        <tr><td>TDI homeowners losses by county</td><td>County × year · 2019–2025</td><td>Paid losses by type; policies in force</td><td>Insured-loss reference (R6)</td></tr>
+        <tr><td>U.S. Census ACS 5-year</td><td>County</td><td>Housing units, owner-occupied homes, median home value</td><td>Development context (R1, R6)</td></tr>
+        <tr><td>TDI premiums and HB 2067 reasons</td><td>County / ZIP · 2019–2026</td><td>Average premium; nonrenewal and declination reasons</td><td>Market context</td></tr>
+      </tbody></table></div>
+    <p class="caution"><b>Caution.</b> NOAA damage is an estimate, not insured loss. TDI losses cover homeowners policies only (no TWIA wind/hail). Preliminary figures use 2015–2025; the system will cover 2006–2025.</p>
+
+    <h2>Interviews and plan</h2>
+    <p>We plan seven 45-minute semi-structured interviews (underwriters or adjusters, a catastrophe analyst, a public-sector reviewer, homeowners or community members, and a faculty pilot): workflow and tools, pain points, a think-aloud with one task per requirement, and ranking R1–R6. <b>Interviews are being scheduled; no findings are reported yet.</b></p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Member</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>MD Imtiaz Mahi</td><td>Data integration and context (R6)</td></tr>
+        <tr><td>Aadi Mahajan</td><td>County comparison (R1, R3)</td></tr>
+        <tr><td>Hendro Setyawan</td><td>Recurring vs. catastrophic (R2, R4)</td></tr>
+        <tr><td>Abhinav Sheshadri</td><td>Event investigation (R5)</td></tr>
+      </tbody></table></div>
+    <p>October: interviews and requirements · Oct–Nov: data integration · November: prototype · Nov–Dec: think-aloud feedback · December: final system.</p>
+    <p>The <a href="../">interactive mock-up</a> on this site is preliminary work: an early probe for the interviews, to be revised toward R1–R6.</p>
+
+    <footer>Team 8 · CSCE 679 Data Visualization · Texas A&amp;M University. Sources: NOAA NCEI Storm Events, Texas Department of Insurance, U.S. Census Bureau ACS; vendor documentation from Verisk and Moody’s. Full references are in the <a href="Team8_Proposal_v2.pdf">proposal report</a>.</footer>
+  </main>
+</body>
+</html>

@@ -27,6 +27,8 @@ body {
 .brand__mark { color: var(--accent); font-size: 26px; text-shadow: 0 0 12px var(--accent); }
 .brand__name { font-family: var(--mono); font-weight: 600; letter-spacing: 0.22em; font-size: 15px; }
 .brand__sub { color: var(--muted); font-size: 11px; letter-spacing: 0.04em; }
+.brand__link { color: var(--accent); text-decoration: none; }
+.brand__link:hover { text-decoration: underline; }
 .kpis { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .kpi { border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; min-width: 110px; background: var(--panel); }
 .kpi__value { font-family: var(--mono); font-size: 16px; font-weight: 600; color: var(--accent); }
