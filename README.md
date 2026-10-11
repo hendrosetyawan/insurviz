@@ -11,7 +11,7 @@ that are usually looked at separately:
 
 **Live:** https://insurviz.web.app · guided story: https://insurviz.web.app/?story=1
 
-**Project proposal (v2, Oct 2026):** https://insurviz.web.app/proposal/ · [report (PDF)](proposal/Team8_Proposal_v2.pdf) · [slides (PDF)](proposal/Team8_Proposal_Slides_v6.pdf)
+**Project proposal (v2, Oct 2026):** https://insurviz.web.app/proposal/
 
 ## Project proposal v2: recurring vs. catastrophic storm damage
 
